@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysRoleDAO">
+    <resultMap id="resultMap" type="com.sensing.core.bean.SysRole">
+        <id column="id" property="id"/>
+        <id column="role_name" property="roleName"/>
+        <id column="role_desc" property="roleDesc"/>
+        <id column="parent_id" property="parentId"/>
+        <id column="create_time" property="createTime"/>
+        <id column="is_deleted" property="isDeleted"/>
+        <id column="add_uuId" property="addUuId"/>
+        <association column="add_uuId" property="addUserName"
+                     select="com.sensing.core.dao.ISysRoleDAO.getUserNameByUuId"/>
+    </resultMap>
+    <sql id="column_list">
+		id,role_name,role_desc,parent_id,create_time,is_deleted,add_uuId
+	</sql>
+    <insert id="saveSysRole" useGeneratedKeys="true" keyProperty="id" parameterType="com.sensing.core.bean.SysRole">
+	   insert into sys_role(role_name,parent_id,create_time,is_deleted,add_uuId)
+	   values(
+		   #{roleName},#{parentId},now(),0,#{addUuId}
+	   )
+	</insert>
+    <select id="getSysRole" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from sys_role
+        where id = #{id}
+    </select>
+    <select id="getSysRoleByName" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from sys_role
+        where role_name = #{roleName}
+        and is_deleted = 0
+    </select>
+    <delete id="removeSysRole">
+		delete from sys_role
+		where id = #{id}
+	</delete>
+    <update id="updateSysRole" parameterType="com.sensing.core.bean.SysRoleSaveReq">
+        update sys_role
+        <set>
+            role_name=#{roleName},
+            <if test="isDeleted !=null and isDeleted == 1">
+                is_deleted = 1
+            </if>
+        </set>
+        where id=#{roleId}
+    </update>
+    <select id="queryList" resultMap="resultMap" parameterType="com.sensing.core.bean.SysRoleReq">
+        select
+        <include refid="column_list"/>
+        from sys_role sr
+        <where>
+            1=1
+            <if test="pIds != null and pIds != '' ">
+                and parent_id in
+                <foreach item="item" index="index" collection="pIds" open="("
+                         separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="isAdmin != null and isAdmin == 0 ">
+                and sr.id !=4
+            </if>
+            and is_deleted =0
+            and sr.id != 2
+
+        </where>
+        order by create_time desc
+        <if test="pageFlag != null and pageFlag == 'pageFlag'">
+            LIMIT #{beginCount},#{pageRows}
+        </if>
+
+    </select>
+    <select id="selectCount" resultType="int" parameterType="com.sensing.core.bean.SysRoleReq">
+        select
+        count(id)
+        from sys_role sr
+        <where>
+            1=1
+            <if test="pIds != null and pIds != '' ">
+                and parent_id in
+                <foreach item="item" index="index" collection="pIds" open="("
+                         separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="isAdmin != null and isAdmin == 0 ">
+                and sr.id !=4
+            </if>
+            and is_deleted =0
+            and sr.id != 2
+        </where>
+    </select>
+    <select id="getUserRoleCount" resultType="com.sensing.core.bean.UserRoleCount">
+
+        SELECT
+        sur.role_id AS roleId,
+        count(sur.role_id) AS count
+        FROM sys_user_role sur
+        <if test="list != null and list != '' ">
+            WHERE sur.role_id IN
+            <foreach item="item" index="index" collection="list" open="("
+                     separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        GROUP BY sur.role_id;
+
+    </select>
+    <select id="getSysListRoleByUuid" resultType="com.sensing.core.bean.SysRole">
+
+        SELECT
+        sur.role_id,
+        count(sur.role_id)
+        FROM sys_user_role sur
+        <if test="list != null and list != '' ">
+            WHERE sur.role_id IN
+            <foreach item="item" index="index" collection="list" open="("
+                     separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        GROUP BY sur.role_id;
+
+    </select>
+    <select id="getUserRoleByUserUuid" resultType="com.sensing.core.bean.SysUserRole">
+
+        SELECT
+        sur.id,
+        user_uuid AS useruid,
+        role_id AS roleId
+        FROM sys_user_role sur WHERE sur.user_uuid =#{userUuid}
+
+    </select>
+
+    <select id="getUserNameByUuId" resultType="String">
+        SELECT
+        su.username as addUserName
+        FROM sys_user su WHERE su.uuid =#{add_uuId}
+    </select>
+
+    <select id="getRoleByAddUserUuids" resultType="com.sensing.core.bean.SysRole">
+        SELECT
+        <include refid="column_list"/>
+        FROM sys_role sr WHERE sr.add_uuid in
+        <foreach item="item" index="index" collection="list" open="("
+                 separator="," close=")">
+            #{item}
+        </foreach>
+
+    </select>
+
+</mapper>

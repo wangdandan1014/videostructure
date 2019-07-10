@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.clickhouseDao.IMotorVehicleCKDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.MotorVehicle">
+	</resultMap>
+	<insert id="saveMotorVehicle">
+	   insert into MotorVehicle(uuid, deviceId, capTime, capDate, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor, vehicleClass, plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, vehicleMarkerTissuebox, vehicleMarkerPendant, sunvisor, safetyBelt, safetyBeltCopilot,calling, capLocation, capUrl, seceneUrl, taskIds)
+	   values(
+		   #{motorVehicle.uuid,jdbcType=VARCHAR},#{motorVehicle.deviceId,jdbcType=VARCHAR},#{motorVehicle.capTime,jdbcType=BIGINT},#{motorVehicle.capDate,jdbcType=DATE},#{motorVehicle.frameTime,jdbcType=BIGINT},#{motorVehicle.capFlag,jdbcType=INTEGER},
+		   #{motorVehicle.plateNo,jdbcType=VARCHAR},#{motorVehicle.vehicleColor,jdbcType=INTEGER},#{motorVehicle.orientation,jdbcType=INTEGER},#{motorVehicle.plateColor,jdbcType=INTEGER},#{motorVehicle.vehicleClass,jdbcType=INTEGER},#{motorVehicle.plateClass,jdbcType=INTEGER},#{motorVehicle.vehicleBrandTag,jdbcType=VARCHAR},
+		   #{motorVehicle.vehicleModelTag,jdbcType=VARCHAR},#{motorVehicle.vehicleStylesTag,jdbcType=VARCHAR},#{motorVehicle.vehicleMarkerMot,jdbcType=INTEGER},#{motorVehicle.vehicleMarkerTissuebox,jdbcType=INTEGER},#{motorVehicle.vehicleMarkerPendant,jdbcType=INTEGER},#{motorVehicle.sunvisor,jdbcType=INTEGER},
+		   #{motorVehicle.safetyBelt,jdbcType=INTEGER},#{motorVehicle.safetyBeltCopilot,jdbcType=INTEGER},#{motorVehicle.calling,jdbcType=INTEGER},#{motorVehicle.capLocation,jdbcType=VARCHAR},#{motorVehicle.capUrl,jdbcType=VARCHAR},#{motorVehicle.seceneUrl,jdbcType=VARCHAR},#{taskIds}
+	   )
+	</insert>
+	<select id="queryByUuid" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor,
+		 vehicleClass, plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, 
+		 vehicleMarkerTissuebox, vehicleMarkerPendant, sunvisor, safetyBelt, safetyBeltCopilot,calling, 
+		 capLocation, capUrl, seceneUrl, taskIds from MotorVehicle where uuid = #{uuid}
+		 <if test="capTime != null and capTime != '' ">
+			and capTime = #{capTime}
+		 </if>
+	</select>
+	<select id="queryByUuids" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor, vehicleClass, plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, vehicleMarkerTissuebox, vehicleMarkerPendant, sunvisor, safetyBelt, safetyBeltCopilot,calling, capLocation, capUrl, seceneUrl, taskIds from MotorVehicle where uuid in 
+		<foreach collection="uuids" item="uuid" index="index" open="(" separator="," close=")">
+	            #{uuid}
+		</foreach>
+	</select>
+	<select id="queryList" resultMap="resultMap">
+		select 
+		<if test="pager.f.plateNoMatch != null and pager.f.plateNoMatch != '' ">
+			match(plateNo,#{pager.f.plateNoMatch}) as id, 
+		</if>
+		uuid, deviceId, capTime, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor, vehicleClass, 
+		plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, vehicleMarkerTissuebox, vehicleMarkerPendant, 
+		sunvisor, safetyBelt, safetyBeltCopilot,calling, capLocation, capUrl, seceneUrl, taskIds from MotorVehicle
+		<where>
+			<if test="pager.f.plateNoMatch != null and pager.f.plateNoMatch != '' ">
+				id =1
+			</if>
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.f.plateNo != null and pager.f.plateNo != '' ">
+				and plateNo = #{pager.f.plateNo}
+			</if>
+			<if test="pager.f.plateNoNotNull != null and pager.f.plateNoNotNull != '' ">
+				and plateNo != ''
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.vehicleColor != null ">
+				and vehicleColor = #{pager.m.vehicleColor}
+			</if>
+			
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.plateColor != null  ">
+				and plateColor = #{pager.m.plateColor}
+			</if>
+
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass =#{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.m.plateClass != null  ">
+				and plateClass =#{pager.m.plateClass}
+			</if>
+
+			<if test="pager.f.vehicleBrandTag != null and pager.f.vehicleBrandTag != '' ">
+				and vehicleBrandTag =#{pager.f.vehicleBrandTag}
+			</if>
+
+			<if test="pager.f.vehicleModelTag != null and pager.f.vehicleModelTag != '' ">
+				and vehicleModelTag =#{pager.f.vehicleModelTag}
+			</if>
+
+			<if test="pager.f.vehicleStylesTag != null and pager.f.vehicleStylesTag != '' ">
+				and vehicleStylesTag =#{pager.f.vehicleStylesTag}
+			</if>
+
+			<if test="pager.m.vehicleMarkerMot != null  ">
+				and vehicleMarkerMot =#{pager.m.vehicleMarkerMot}
+			</if>
+
+			<if test="pager.m.vehicleMarkerTissuebox != null  ">
+				and vehicleMarkerTissuebox =#{pager.m.vehicleMarkerTissuebox}
+			</if>
+
+			<if test="pager.m.vehicleMarkerPendant != null  ">
+				and vehicleMarkerPendant =#{pager.m.vehicleMarkerPendant}
+			</if>
+
+			<if test="pager.m.sunvisor != null  ">
+				and sunvisor =#{pager.m.sunvisor}
+			</if>
+
+			<if test="pager.m.safetyBelt != null  ">
+				and safetyBelt =#{pager.m.safetyBelt}
+			</if>
+			
+			<if test="pager.m.safetyBeltCopilot != null  ">
+				and safetyBeltCopilot =#{pager.m.safetyBeltCopilot}
+			</if>
+
+			<if test="pager.m.calling != null  ">
+				and calling =#{pager.m.calling}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		</where>
+			order by capTime desc, frameTime asc
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select count(1) from MotorVehicle
+		<where>
+			<if test="pager.f.plateNoMatch != null and pager.f.plateNoMatch != '' ">
+				match(plateNo,#{pager.f.plateNoMatch}) =1
+			</if>
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.f.plateNo != null and pager.f.plateNo != '' ">
+				and plateNo = #{pager.f.plateNo}
+			</if>
+			<if test="pager.f.plateNoNotNull != null and pager.f.plateNoNotNull != '' ">
+				and plateNo != ''
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.vehicleColor != null  ">
+				and vehicleColor = #{pager.m.vehicleColor}
+			</if>
+			
+			<if test="pager.m.orientation != null ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.plateColor != null  ">
+				and plateColor = #{pager.m.plateColor}
+			</if>
+
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass =#{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.m.plateClass != null  ">
+				and plateClass =#{pager.m.plateClass}
+			</if>
+
+			<if test="pager.f.vehicleBrandTag != null and pager.f.vehicleBrandTag != '' ">
+				and vehicleBrandTag =#{pager.f.vehicleBrandTag}
+			</if>
+
+			<if test="pager.f.vehicleModelTag != null and pager.f.vehicleModelTag != '' ">
+				and vehicleModelTag =#{pager.f.vehicleModelTag}
+			</if>
+
+			<if test="pager.f.vehicleStylesTag != null and pager.f.vehicleStylesTag != '' ">
+				and vehicleStylesTag =#{pager.f.vehicleStylesTag}
+			</if>
+
+			<if test="pager.m.vehicleMarkerMot != null  ">
+				and vehicleMarkerMot =#{pager.m.vehicleMarkerMot}
+			</if>
+
+			<if test="pager.m.vehicleMarkerTissuebox != null  ">
+				and vehicleMarkerTissuebox =#{pager.m.vehicleMarkerTissuebox}
+			</if>
+
+			<if test="pager.m.vehicleMarkerPendant != null  ">
+				and vehicleMarkerPendant =#{pager.m.vehicleMarkerPendant}
+			</if>
+
+			<if test="pager.m.sunvisor != null  ">
+				and sunvisor =#{pager.m.sunvisor}
+			</if>
+			
+			<if test="pager.m.safetyBelt != null  ">
+				and safetyBelt =#{pager.m.safetyBelt}
+			</if>
+
+			<if test="pager.m.safetyBeltCopilot != null ">
+				and safetyBeltCopilot =#{pager.m.safetyBeltCopilot}
+			</if>
+
+			<if test="pager.m.calling != null  ">
+				and calling =#{pager.m.calling}
+			</if>
+			
+			<if test="pager.m.capFlag != null  ">
+				and capFlag =#{pager.m.capFlag}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		</where>
+	</select>
+	
+	<select id="queryListByTaskId" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor, vehicleClass, 
+		plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, vehicleMarkerTissuebox, vehicleMarkerPendant, 
+		sunvisor, safetyBelt, safetyBeltCopilot,calling, capLocation, capUrl, seceneUrl, taskIds from (select  uuid, deviceId, capTime, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor, vehicleClass, 
+		plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, vehicleMarkerTissuebox, vehicleMarkerPendant, 
+		sunvisor, safetyBelt, safetyBeltCopilot,calling, capLocation, capUrl, seceneUrl, taskIds, countEqual(taskIds,#{pager.f.taskId}) as 
+		taskId from MotorVehicle WHERE taskId =1 
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.f.plateNo != null and pager.f.plateNo != '' ">
+				and plateNo = #{pager.f.plateNo}
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.vehicleColor != null  ">
+				and vehicleColor = #{pager.m.vehicleColor}
+			</if>
+			
+			<if test="pager.m.orientation != null ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.plateColor != null ">
+				and plateColor = #{pager.m.plateColor}
+			</if>
+
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass =#{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.m.plateClass != null ">
+				and plateClass =#{pager.m.plateClass}
+			</if>
+
+			<if test="pager.f.vehicleBrandTag != null and pager.f.vehicleBrandTag != '' ">
+				and vehicleBrandTag =#{pager.f.vehicleBrandTag}
+			</if>
+
+			<if test="pager.f.vehicleModelTag != null and pager.f.vehicleModelTag != '' ">
+				and vehicleModelTag =#{pager.f.vehicleModelTag}
+			</if>
+
+			<if test="pager.f.vehicleStylesTag != null and pager.f.vehicleStylesTag != '' ">
+				and vehicleStylesTag =#{pager.f.vehicleStylesTag}
+			</if>
+
+			<if test="pager.m.vehicleMarkerMot != null  ">
+				and vehicleMarkerMot =#{pager.m.vehicleMarkerMot}
+			</if>
+
+			<if test="pager.m.vehicleMarkerTissuebox != null  ">
+				and vehicleMarkerTissuebox =#{pager.m.vehicleMarkerTissuebox}
+			</if>
+
+			<if test="pager.m.vehicleMarkerPendant != null  ">
+				and vehicleMarkerPendant =#{pager.m.vehicleMarkerPendant}
+			</if>
+
+			<if test="pager.m.sunvisor != null  ">
+				and sunvisor =#{pager.m.sunvisor}
+			</if>
+			
+			<if test="pager.m.safetyBelt != null  ">
+				and safetyBelt =#{pager.m.safetyBelt}
+			</if>			
+
+			<if test="pager.m.safetyBeltCopilot != null ">
+				and safetyBeltCopilot =#{pager.m.safetyBeltCopilot}
+			</if>
+
+			<if test="pager.m.calling != null  ">
+				and calling =#{pager.m.calling}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		 order by capTime desc 
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>) 
+	</select>
+	<select id="queryOffVideoListByTaskId" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor, vehicleClass, 
+		plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, vehicleMarkerTissuebox, vehicleMarkerPendant, 
+		sunvisor, safetyBelt, safetyBeltCopilot,calling, capLocation, capUrl, seceneUrl, taskIds from (select  uuid, deviceId, capTime, frameTime,capFlag, plateNo, vehicleColor, orientation, plateColor, vehicleClass, 
+		plateClass, vehicleBrandTag, vehicleModelTag, vehicleStylesTag, vehicleMarkerMot, vehicleMarkerTissuebox, vehicleMarkerPendant, 
+		sunvisor, safetyBelt, safetyBeltCopilot,calling, capLocation, capUrl, seceneUrl, taskIds, countEqual(taskIds,#{pager.f.taskId}) as 
+		taskId from MotorVehicle WHERE taskId =1 
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.f.plateNo != null and pager.f.plateNo != '' ">
+				and plateNo = #{pager.f.plateNo}
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.vehicleColor != null  ">
+				and vehicleColor = #{pager.m.vehicleColor}
+			</if>
+			
+			<if test="pager.m.orientation != null ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.plateColor != null ">
+				and plateColor = #{pager.m.plateColor}
+			</if>
+
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass =#{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.m.plateClass != null ">
+				and plateClass =#{pager.m.plateClass}
+			</if>
+
+			<if test="pager.f.vehicleBrandTag != null and pager.f.vehicleBrandTag != '' ">
+				and vehicleBrandTag =#{pager.f.vehicleBrandTag}
+			</if>
+
+			<if test="pager.f.vehicleModelTag != null and pager.f.vehicleModelTag != '' ">
+				and vehicleModelTag =#{pager.f.vehicleModelTag}
+			</if>
+
+			<if test="pager.f.vehicleStylesTag != null and pager.f.vehicleStylesTag != '' ">
+				and vehicleStylesTag =#{pager.f.vehicleStylesTag}
+			</if>
+
+			<if test="pager.m.vehicleMarkerMot != null  ">
+				and vehicleMarkerMot =#{pager.m.vehicleMarkerMot}
+			</if>
+
+			<if test="pager.m.vehicleMarkerTissuebox != null  ">
+				and vehicleMarkerTissuebox =#{pager.m.vehicleMarkerTissuebox}
+			</if>
+
+			<if test="pager.m.vehicleMarkerPendant != null  ">
+				and vehicleMarkerPendant =#{pager.m.vehicleMarkerPendant}
+			</if>
+
+			<if test="pager.m.sunvisor != null  ">
+				and sunvisor =#{pager.m.sunvisor}
+			</if>
+			
+			<if test="pager.m.safetyBelt != null  ">
+				and safetyBelt =#{pager.m.safetyBelt}
+			</if>			
+
+			<if test="pager.m.safetyBeltCopilot != null ">
+				and safetyBeltCopilot =#{pager.m.safetyBeltCopilot}
+			</if>
+
+			<if test="pager.m.calling != null  ">
+				and calling =#{pager.m.calling}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		 order by frameTime asc 
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>) 
+	</select>
+	<select id="selectCountByTaskId" resultType="int">
+	select count( 1) from (select  countEqual(taskIds,#{pager.f.taskId}) as taskId from MotorVehicle 
+	WHERE taskId =1  
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.f.plateNo != null and pager.f.plateNo != '' ">
+				and plateNo = #{pager.f.plateNo}
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.vehicleColor != null ">
+				and vehicleColor = #{pager.m.vehicleColor}
+			</if>
+			
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.plateColor != null ">
+				and plateColor = #{pager.m.plateColor}
+			</if>
+
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass =#{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.m.plateClass != null  ">
+				and plateClass =#{pager.m.plateClass}
+			</if>
+
+			<if test="pager.f.vehicleBrandTag != null and pager.f.vehicleBrandTag != '' ">
+				and vehicleBrandTag =#{pager.f.vehicleBrandTag}
+			</if>
+
+			<if test="pager.f.vehicleModelTag != null and pager.f.vehicleModelTag != '' ">
+				and vehicleModelTag =#{pager.f.vehicleModelTag}
+			</if>
+
+			<if test="pager.f.vehicleStylesTag != null and pager.f.vehicleStylesTag != '' ">
+				and vehicleStylesTag =#{pager.f.vehicleStylesTag}
+			</if>
+
+			<if test="pager.m.vehicleMarkerMot != null  ">
+				and vehicleMarkerMot =#{pager.m.vehicleMarkerMot}
+			</if>
+
+			<if test="pager.m.vehicleMarkerTissuebox != null  ">
+				and vehicleMarkerTissuebox =#{pager.m.vehicleMarkerTissuebox}
+			</if>
+
+			<if test="pager.m.vehicleMarkerPendant != null  ">
+				and vehicleMarkerPendant =#{pager.m.vehicleMarkerPendant}
+			</if>
+
+			<if test="pager.m.sunvisor != null  ">
+				and sunvisor =#{pager.m.sunvisor}
+			</if>
+			
+			<if test="pager.m.safetyBelt != null  ">
+				and safetyBelt =#{pager.m.safetyBelt}
+			</if>			
+
+			<if test="pager.m.safetyBeltCopilot != null  ">
+				and safetyBeltCopilot =#{pager.m.safetyBeltCopilot}
+			</if>
+
+			<if test="pager.m.calling != null  ">
+				and calling =#{pager.m.calling}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		)
+	</select>
+
+</mapper>

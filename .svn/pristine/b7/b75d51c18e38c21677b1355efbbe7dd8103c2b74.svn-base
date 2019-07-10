@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysTypecodeDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.SysTypecode">
+		<id column="uuid" property="uuid" />
+		<id column="item_id" property="itemId" />
+		<id column="type_code" property="typeCode" />
+		<id column="item_code" property="itemCode" />
+		<id column="item_value" property="itemValue" />
+		<id column="parent_id" property="parentId" />
+		<id column="search_code" property="searchCode" />
+		<id column="memo" property="memo" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,type_code,item_id,item_code,item_value,parent_id,search_code,memo
+	</sql>
+	<insert id="saveSysTypecode">
+	   insert into sys_typecode(uuid,type_code,item_id,item_code,item_value,parent_id,search_code,memo)
+	   values(
+		   #{uuid},#{typeCode},#{itemId},#{itemCode},#{itemValue},#{parentId},#{searchCode},#{memo}
+	   )
+	</insert>
+	<select id="getSysTypecode" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_typecode
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeSysTypecode">
+		delete from sys_typecode
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateSysTypecode">
+	   update sys_typecode set type_code=#{typeCode},item_code=#{itemCode},item_value=#{itemValue},parent_id=#{parentId},search_code=#{searchCode},memo=#{memo}
+	   where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_typecode
+		<where>
+			<if test="f.typeCode != null and f.typeCode != '' ">
+				and type_code = #{f.typeCode}
+			</if>
+			<if test="f.itemCode != null and f.itemCode != '' ">
+				and item_code like CONCAT('%',#{f.itemCode},'%')
+			</if>
+			<if test="f.itemValue != null and f.itemValue != '' ">
+				and item_value like CONCAT('%',#{f.itemValue},'%')
+			</if>
+			<if test="f.parentId != null and f.parentId != '' ">
+				and parent_id like CONCAT('%',#{f.parentId},'%')
+			</if>
+			<if test="f.searchCode != null and f.searchCode != '' ">
+				and search_code like CONCAT('%',#{f.searchCode},'%')
+			</if>
+			<if test="f.memo != null and f.memo != '' ">
+				and memo like CONCAT('%',#{f.memo},'%')
+			</if>
+		</where>
+		order by item_id asc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from sys_typecode
+		<where>
+			<if test="f.typeCode != null and f.typeCode != '' ">
+				and type_code like CONCAT('%',#{f.typeCode},'%')
+			</if>
+			<if test="f.itemCode != null and f.itemCode != '' ">
+				and item_code like CONCAT('%',#{f.itemCode},'%')
+			</if>
+			<if test="f.itemValue != null and f.itemValue != '' ">
+				and item_value like CONCAT('%',#{f.itemValue},'%')
+			</if>
+			<if test="f.parentId != null and f.parentId != '' ">
+				and parent_id like CONCAT('%',#{f.parentId},'%')
+			</if>
+			<if test="f.searchCode != null and f.searchCode != '' ">
+				and search_code like CONCAT('%',#{f.searchCode},'%')
+			</if>
+			<if test="f.memo != null and f.memo != '' ">
+				and memo like CONCAT('%',#{f.memo},'%')
+			</if>
+		</where>
+	</select>
+	
+	<!-- 根据type_code 和 item_id 查询一条记录 -->
+	<select id="selectSysTypeCodeByTypeCodeAndItemId" resultMap="resultMap">
+		
+		SELECT
+			<include refid="column_list" />
+		FROM
+			sys_typecode sty
+		<where>
+			<if test="type_code !=null and type_code !='' ">
+					sty.type_code = #{type_code}
+			</if>
+			<if test="item_id !=null and item_id !='' ">
+					AND sty.item_id = #{item_id}
+			</if>
+		</where>
+	</select>
+</mapper>

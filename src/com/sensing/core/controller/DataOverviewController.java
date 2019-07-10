@@ -1,0 +1,622 @@
+package com.sensing.core.controller;
+
+import java.text.DecimalFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.alibaba.fastjson.JSONObject;
+import com.sensing.core.dao.IChannelDAO;
+import com.sensing.core.dao.IJobsDAO;
+import com.sensing.core.dao.ITaskDAO;
+import com.sensing.core.service.IDataOverviewService;
+import com.sensing.core.service.ISearchClickhouseService;
+import com.sensing.core.utils.BaseController;
+import com.sensing.core.utils.Pager;
+import com.sensing.core.utils.ResponseBean;
+import com.sensing.core.utils.results.ResultUtils;
+import com.sensing.core.utils.time.DateStyle;
+import com.sensing.core.utils.time.DateUtil;
+import com.sensing.core.utils.time.QueryDateUtils;
+import com.sensing.core.utils.time.TransfTimeUtil;
+
+@Controller
+@RequestMapping("/overview")
+public class DataOverviewController extends BaseController {
+
+	private static final Log log = LogFactory.getLog(DataOverviewController.class);
+//	@Resource
+//	private ISearchQueryService searchQueryService;
+	@Resource
+	public IDataOverviewService dataOverviewService;
+	@Resource
+	private ISearchClickhouseService searchClickhouseService;
+	@Resource
+	private IJobsDAO jobsDAO;
+	@Resource
+	private ITaskDAO taskDAO;
+	@Resource
+	private IChannelDAO channelDAO;
+
+	/**
+	 * 统计时间段范围内每天的告警的数量
+	 * 
+	 * @param json
+	 * @return
+	 * @author mingxingyu
+	 * @date 2018年12月5日 上午10:56:56
+	 */
+	@ResponseBody
+	@RequestMapping("/alarmCountByDay")
+	@SuppressWarnings("all")
+	public ResponseBean alarmCountByDay(@RequestBody JSONObject json) {
+		log.info("开始进行告警数量的统计，调用 overview/alarmCount接口，传递参数为: " + json);
+		ResponseBean result = new ResponseBean();
+		if (json == null || json.isEmpty()) {
+			log.error("请求参数非法");
+			result = ResultUtils.FAIL();
+			return result;
+		}
+
+		String startDate = json.getString("startDate");
+		String endDate = json.getString("endDate");
+		String deviceId = json.getString("deviceId");
+		String date = json.getString("date");
+		if (StringUtils.isEmpty(startDate) && StringUtils.isEmpty(endDate) && StringUtils.isEmpty(date)) {
+			result = ResultUtils.REQUIRED_EMPTY_ERROR();
+			return result;
+		}
+		Map<String, Object> sqlParams = new HashMap<String, Object>();
+		sqlParams.put("deviceId", deviceId);
+		if (StringUtils.isNotBlank(date)) {
+			long startTime = 0l;
+			long endTime = 0l;
+			Date[] dates;
+			if ("1".equals(date)) {
+				dates = QueryDateUtils.getToday();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-1".equals(date)) {
+				dates = QueryDateUtils.getYesterday();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-3".equals(date)) {
+				dates = QueryDateUtils.get3Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-7".equals(date)) {
+				dates = QueryDateUtils.get7Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-15".equals(date)) {
+				dates = QueryDateUtils.get15Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-30".equals(date)) {
+				dates = QueryDateUtils.get30Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else {
+				endTime = new Date().getTime() / 1000;
+				startTime = endTime;
+			}
+			sqlParams.put("startDate", TransfTimeUtil.UnixTimeStamp2Date(startTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+			sqlParams.put("endDate", TransfTimeUtil.UnixTimeStamp2Date(endTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+			result.getMap().put("startDate",
+					TransfTimeUtil.UnixTimeStamp2Date(startTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+			result.getMap().put("endDate", TransfTimeUtil.UnixTimeStamp2Date(endTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+		}
+		if (StringUtils.isNotBlank(startDate) && StringUtils.isNotBlank(endDate)) {
+			sqlParams.put("startDate", startDate);
+			sqlParams.put("endDate", endDate);
+		}
+		try {
+			List<Map<String, Object>> resultList = dataOverviewService.alarmCountByDay(sqlParams);
+			result.getMap().put("resultList", resultList);
+			result.setMessage("successful");
+		} catch (Exception e) {
+			e.printStackTrace();
+			result = ResultUtils.FAIL();
+		}
+		return result;
+	}
+
+	/**
+	 * 统计告警的数量
+	 * 
+	 * @param json
+	 * @return
+	 * @author mingxingyu
+	 * @date 2018年12月5日 上午10:56:56
+	 */
+	@ResponseBody
+	@RequestMapping("/alarmCount")
+	@SuppressWarnings("all")
+	public ResponseBean alarmCount(@RequestBody JSONObject json) {
+		log.info("开始进行告警数量的统计，调用 overview/alarmCount接口，传递参数为: " + json);
+		ResponseBean result = new ResponseBean();
+		if (json == null || json.isEmpty()) {
+			log.error("请求参数非法");
+			result = ResultUtils.FAIL();
+			return result;
+		}
+
+		String startTimeStr = json.getString("startDate");
+		String endTimeStr = json.getString("endDate");
+		String deviceId = json.getString("deviceId");
+		String date = json.getString("date");
+		if (StringUtils.isEmpty(startTimeStr) && StringUtils.isEmpty(endTimeStr) && StringUtils.isEmpty(date)) {
+			result = ResultUtils.REQUIRED_EMPTY_ERROR();
+			return result;
+		}
+		Map<String, Object> sqlParams = new HashMap<String, Object>();
+		List<String> channels = null;
+		if (StringUtils.isNotEmpty(deviceId)) {
+			channels = Arrays.asList(deviceId.split(",")).stream().map(s -> s.trim()).collect(Collectors.toList());
+		}
+		sqlParams.put("deviceIds", channels);
+		if (StringUtils.isNotBlank(date)) {
+			long startTime = 0l;
+			long endTime = 0l;
+			Date[] dates;
+			if ("1".equals(date)) {
+				dates = QueryDateUtils.getToday();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-1".equals(date)) {
+				dates = QueryDateUtils.getYesterday();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-3".equals(date)) {
+				dates = QueryDateUtils.get3Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-7".equals(date)) {
+				dates = QueryDateUtils.get7Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-15".equals(date)) {
+				dates = QueryDateUtils.get15Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-30".equals(date)) {
+				dates = QueryDateUtils.get30Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else {
+				endTime = new Date().getTime() / 1000;
+				startTime = endTime;
+			}
+			sqlParams.put("startTime", startTime);
+			sqlParams.put("endTime", endTime);
+			result.getMap().put("startDate",
+					TransfTimeUtil.UnixTimeStamp2Date(startTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+			result.getMap().put("endDate", TransfTimeUtil.UnixTimeStamp2Date(endTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+		}
+
+		if (StringUtils.isNotBlank(startTimeStr) && StringUtils.isNotBlank(endTimeStr)) {
+			sqlParams.put("startTime", DateUtil.StringToDate(startTimeStr).getTime() / 1000);
+			sqlParams.put("endTime", DateUtil.StringToDate(endTimeStr).getTime() / 1000);
+			result.getMap().put("startDate", startTimeStr);
+			result.getMap().put("endDate", endTimeStr);
+		}
+		try {
+			List<Map<String, Object>> resultList = dataOverviewService.alarmCount(sqlParams);
+			int totalCount = 0;
+			int level1Count = 0;
+			int level2Count = 0;
+			int level3Count = 0;
+			if (resultList != null && resultList.size() > 0) {
+				for (int i = 0; i < resultList.size(); i++) {
+					Map<String, Object> resultMap = resultList.get(i);
+					int level = (int) resultMap.get("alarmLevel");
+					if (1 == level) {
+						level1Count = ((Long) resultMap.get("alarmCount")).intValue();
+						totalCount += level1Count;
+					}
+					if (2 == level) {
+						level2Count = ((Long) resultMap.get("alarmCount")).intValue();
+						totalCount += level2Count;
+					}
+					if (3 == level) {
+						level3Count = ((Long) resultMap.get("alarmCount")).intValue();
+						totalCount += level3Count;
+					}
+				}
+			}
+
+			if (level1Count == 0) {
+				Map<String, Object> map = new HashMap<String, Object>();
+				map.put("alarmLevel", "1");
+				map.put("alarmCount", "0");
+				resultList.add(map);
+			}
+			if (level2Count == 0) {
+				Map<String, Object> map = new HashMap<String, Object>();
+				map.put("alarmLevel", "2");
+				map.put("alarmCount", "0");
+				resultList.add(map);
+			}
+			if (level3Count == 0) {
+				Map<String, Object> map = new HashMap<String, Object>();
+				map.put("alarmLevel", "3");
+				map.put("alarmCount", "0");
+				resultList.add(map);
+			}
+
+			DecimalFormat df = new DecimalFormat("#.0");
+			result.getMap().put("result", resultList);
+			result.getMap().put("totalCount", totalCount);
+			result.getMap().put("level1Per",
+					totalCount == 0 ? 0 : Double.parseDouble(df.format((level1Count * 1.0 / totalCount * 100))));
+			result.getMap().put("level2Per",
+					totalCount == 0 ? 0 : Double.parseDouble(df.format((level2Count * 1.0 / totalCount * 100))));
+			result.getMap().put("level3Per",
+					totalCount == 0 ? 0 : Double.parseDouble(df.format((level3Count * 1.0 / totalCount * 100))));
+			result.setMessage("successful");
+		} catch (Exception e) {
+			e.printStackTrace();
+			result = ResultUtils.FAIL();
+		}
+		return result;
+	}
+
+	/**
+	 * 通行量统计
+	 * 
+	 * @param json
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping("/trafficCount")
+	public ResponseBean trafficCount(@RequestBody JSONObject json) {
+		log.info("开始进行通道通行量统计，调用 overview/trafficCount 接口，传递参数为: " + json);
+		ResponseBean result = new ResponseBean();
+		if (json == null || json.isEmpty()) {
+			log.error("请求参数非法");
+			result = ResultUtils.FAIL();
+			return result;
+		}
+		String startTimeStr = json.getString("startDate");
+		String endTimeStr = json.getString("endDate");
+		String deviceId = json.getString("deviceId");
+		String date = json.getString("date");
+		String type = json.getString("type");
+		if (StringUtils.isEmpty(startTimeStr) && StringUtils.isEmpty(endTimeStr) && StringUtils.isEmpty(date)) {
+			result = ResultUtils.REQUIRED_EMPTY_ERROR();
+			return result;
+		}
+		Map<String, Object> sqlParams = new HashMap<String, Object>();
+		Map<String, Object> map = new HashMap<String, Object>();
+
+		long startTime = 0l;
+		long endTime = 0l;
+		if (StringUtils.isNotBlank(date)) {
+			Date[] dates;
+			if ("1".equals(date)) {
+				dates = QueryDateUtils.getToday();
+				if (dates != null && dates.length == 2) {
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				}
+			} else if ("-1".equals(date)) {
+				dates = QueryDateUtils.getYesterday();
+				if (dates != null && dates.length == 2) {
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				}
+			} else if ("-3".equals(date)) {
+				dates = QueryDateUtils.get3Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-7".equals(date)) {
+				dates = QueryDateUtils.get7Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-15".equals(date)) {
+				dates = QueryDateUtils.get15Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else if ("-30".equals(date)) {
+				dates = QueryDateUtils.get30Day();
+				endTime = dates[0].getTime() / 1000;
+				startTime = dates[1].getTime() / 1000;
+			} else {
+				endTime = new Date().getTime() / 1000;
+				startTime = endTime;
+			}
+			sqlParams.put("startTime", startTime);
+			sqlParams.put("endTime", endTime);
+		}
+		if (StringUtils.isNotBlank(startTimeStr) && StringUtils.isNotBlank(endTimeStr)) {
+			sqlParams.put("startTime", DateUtil.StringToDate(startTimeStr).getTime() / 1000);
+			sqlParams.put("endTime", DateUtil.StringToDate(endTimeStr).getTime() / 1000);
+		}
+		if (StringUtils.isNotBlank(deviceId)) {
+			sqlParams.put("deviceId", deviceId);
+		}
+		try {
+			sqlParams.put("type", type);
+			map = searchClickhouseService.trafficCount(sqlParams);
+			map.put("date", date);
+			result = ResultUtils.success(map);
+		} catch (Exception e) {
+			e.printStackTrace();
+			result = ResultUtils.FAIL();
+		}
+		return result;
+	}
+
+	/**
+	 * 报警统计 统计今天 本周 本月的报警数量以及环比上周 上月的百分比
+	 * 
+	 * 
+	 * 
+	 * @param json
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping("/alarmStatistics")
+	public ResponseBean alarmStatistics(@RequestBody JSONObject json) {
+		log.info("开始进行报警统计，调用 overview/alarmStatistics 接口，传递参数为: " + json);
+		ResponseBean result = new ResponseBean();
+		if (json == null || json.isEmpty()) {
+			log.error("请求参数非法");
+			result = ResultUtils.FAIL();
+			return result;
+		}
+		String date = json.getString("date"); // 1：今天
+		String type = json.getString("type"); // 1:昨天 2：上周 3：上月
+		if (StringUtils.isEmpty(type) && StringUtils.isEmpty(date)) {
+			result = ResultUtils.REQUIRED_EMPTY_ERROR();
+			return result;
+		}
+		Map<String, Object> sqlParams = new HashMap<String, Object>();
+		Map<String, Object> map = new HashMap<String, Object>();
+		long startTime = 0l;
+		long endTime = 0l;
+		if (StringUtils.isNotBlank(date)) {
+			Date[] dates;
+			if ("1".equals(date)) {
+				dates = QueryDateUtils.getToday();
+				if (dates != null && dates.length == 2) {
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				}
+			} else if ("-1".equals(date)) {
+				dates = QueryDateUtils.getYesterday();
+				if (dates != null && dates.length == 2) {
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				}
+			} else if ("-7".equals(date)) {// 本周
+				startTime = DateUtil.getBeginDayOfWeek().getTime() / 1000;
+				endTime = new Date().getTime() / 1000;
+			} else if ("-30".equals(date)) {// 本月
+				startTime = DateUtil.getBeginDayOfMonth().getTime() / 1000;
+				endTime = new Date().getTime() / 1000;
+			} else {
+				endTime = new Date().getTime() / 1000;
+				startTime = endTime;
+			}
+			sqlParams.put("startTime", startTime);
+			sqlParams.put("endTime", endTime);
+		}
+		try {
+			sqlParams.put("type", type);
+			map = dataOverviewService.alarmStatistics(sqlParams);
+			result = ResultUtils.success(map);
+		} catch (Exception e) {
+			e.printStackTrace();
+			result = ResultUtils.FAIL();
+		}
+		return result;
+	}
+
+	/**
+	 * 布控任务、实时结构化任务、通道总数量统计
+	 * 
+	 * @param json
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping("/overviewStatistics")
+	public ResponseBean overviewStatistics(@RequestBody Pager pager) {
+		log.info("开始进行概览统计，调用 overview/overviewStatistics 接口，传递参数为: " + pager);
+		Map<String, Object> mapCount = new HashMap<String, Object>();
+		ResponseBean result = new ResponseBean();
+		int taskCount = 0;
+		int channelCount = 0;
+		try {
+
+			pager.getF().put("type", 1 + "");
+			taskCount = taskDAO.selectCount(pager);
+			pager.getF().put("isDel", 0 + "");
+			channelCount = channelDAO.selectCountNew(pager);
+			// 10:待启动 20:布控中 30:暂停中 40:休息中 四种状态的和为布控数量
+			pager.getF().put("state", 10 + "");
+			Integer jobCount1 = jobsDAO.jobListCount(pager);// 布控数量
+			pager.getF().put("state", 20 + "");
+			Integer jobCount2 = jobsDAO.jobListCount(pager);// 布控数量
+			pager.getF().put("state", 30 + "");
+			Integer jobCount3 = jobsDAO.jobListCount(pager);// 布控数量
+			pager.getF().put("state", 40 + "");
+			Integer jobCount4 = jobsDAO.jobListCount(pager);// 布控数量
+
+			mapCount.put("taskCount", taskCount);
+			mapCount.put("jobCount", jobCount1 + jobCount2 + jobCount3 + jobCount4);
+			mapCount.put("channelCount", channelCount);
+			result = ResultUtils.success(mapCount);
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.error("概览统计发生错误，错误信息为：" + e.getMessage());
+			result = ResultUtils.UNKONW_ERROR();
+		}
+		return result;
+	}
+
+	/**
+	 * 报警类型统计
+	 * 
+	 * @param p
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping("/alarmTypeStatistics")
+	public ResponseBean alarmTypeStatistics(@RequestBody JSONObject json) {
+		log.info("开始进行报警类型统计，调用 overview/alarmTypeStatistics 接口，传递参数为: " + json);
+		Map<String, Object> sqlParams = new HashMap<String, Object>();
+		String date = json.getString("date");
+		String startTimeStr = json.getString("startDate");
+		String endTimeStr = json.getString("endDate");
+		String deviceId = json.getString("deviceId");
+		List<String> channels = null;
+		if (StringUtils.isNotEmpty(deviceId)) {
+			channels = Arrays.asList(deviceId.split(",")).stream().map(s -> s.trim()).collect(Collectors.toList());
+		}
+		sqlParams.put("deviceIds", channels);
+		ResponseBean result = new ResponseBean();
+		try {
+			long startTime = 0l;
+			long endTime = 0l;
+			if (StringUtils.isNotBlank(date)) {
+				Date[] dates;
+				if ("1".equals(date)) {
+					dates = QueryDateUtils.getToday();
+					if (dates != null && dates.length == 2) {
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					}
+				} else if ("-1".equals(date)) {
+					dates = QueryDateUtils.getYesterday();
+					if (dates != null && dates.length == 2) {
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					}
+				} else if ("-3".equals(date)) {
+					dates = QueryDateUtils.get3Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else if ("-7".equals(date)) {
+					dates = QueryDateUtils.get7Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else if ("-15".equals(date)) {
+					dates = QueryDateUtils.get15Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else if ("-30".equals(date)) {
+					dates = QueryDateUtils.get30Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else {
+					endTime = new Date().getTime() / 1000;
+					startTime = endTime;
+				}
+				sqlParams.put("startTime", startTime);
+				sqlParams.put("endTime", endTime);
+			}
+			if (StringUtils.isNotBlank(startTimeStr) && StringUtils.isNotBlank(endTimeStr)) {
+				sqlParams.put("startTime", DateUtil.StringToDate(startTimeStr).getTime() / 1000);
+				sqlParams.put("endTime", DateUtil.StringToDate(endTimeStr).getTime() / 1000);
+			}
+			List<Map<String, Object>> list = dataOverviewService.alarmTypeStatistics(sqlParams);
+			result = ResultUtils.success("list", list);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.error("报警类型统计发生错误，错误信息为：" + e.getMessage());
+			result = ResultUtils.UNKONW_ERROR();
+		}
+		return result;
+	}
+
+	/**
+	 * 区域报警统计
+	 * 
+	 * @param p
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping("/regionAlarmStatistics")
+	public ResponseBean regionAlarmStatistics(@RequestBody JSONObject json) {
+		log.info("开始进行区域报警统计，调用 overview/regionAlarmStatistics 接口，传递参数为: " + json);
+		Map<String, Object> sqlParams = new HashMap<String, Object>();
+		String date = json.getString("date");
+		String startTimeStr = json.getString("startDate");
+		String endTimeStr = json.getString("endDate");
+		String deviceId = json.getString("deviceId");
+		List<String> channels = null;
+		if (StringUtils.isNotEmpty(deviceId)) {
+			channels = Arrays.asList(deviceId.split(",")).stream().map(s -> s.trim()).collect(Collectors.toList());
+		}
+		sqlParams.put("deviceIds", channels);
+		ResponseBean result = new ResponseBean();
+		try {
+			long startTime = 0l;
+			long endTime = 0l;
+			if (StringUtils.isNotBlank(date)) {
+				Date[] dates;
+				if ("1".equals(date)) {
+					dates = QueryDateUtils.getToday();
+					if (dates != null && dates.length == 2) {
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					}
+				} else if ("-1".equals(date)) {
+					dates = QueryDateUtils.getYesterday();
+					if (dates != null && dates.length == 2) {
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					}
+				} else if ("-3".equals(date)) {
+					dates = QueryDateUtils.get3Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else if ("-7".equals(date)) {
+					dates = QueryDateUtils.get7Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else if ("-15".equals(date)) {
+					dates = QueryDateUtils.get15Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else if ("-30".equals(date)) {
+					dates = QueryDateUtils.get30Day();
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				} else {
+					endTime = new Date().getTime() / 1000;
+					startTime = endTime;
+				}
+				sqlParams.put("startTime", startTime);
+				sqlParams.put("endTime", endTime);
+			}
+			if (StringUtils.isNotBlank(startTimeStr) && StringUtils.isNotBlank(endTimeStr)) {
+				sqlParams.put("startTime", DateUtil.StringToDate(startTimeStr).getTime() / 1000);
+				sqlParams.put("endTime", DateUtil.StringToDate(endTimeStr).getTime() / 1000);
+			}
+			List<Map<String, Object>> list = dataOverviewService.regionAlarmStatistics(sqlParams);
+			result = ResultUtils.success("list", list);
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.error("区域报警统计发生错误，错误信息为：" + e.getMessage());
+			result = ResultUtils.UNKONW_ERROR();
+		}
+		return result;
+	}
+
+}

@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IMotorVehicleDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.MotorVehicle">
+		<id column="uuid" property="uuid" />
+		<id column="type" property="type" />
+		<id column="device_id" property="deviceId" />
+		<id column="cap_time" property="capTime" />
+		<id column="plate_no" property="plateNo" />
+		<id column="vehicle_color" property="vehicleColor" />
+		<id column="orientation" property="orientation" />
+		<id column="plate_color" property="plateColor" />
+		<id column="plate_class" property="plateClass" />
+		<id column="vehicle_class" property="vehicleClass" />
+		<id column="vehicle_brand_tag" property="vehicleBrandTag" />
+		<id column="vehicle_model_tag" property="vehicleModelTag" />
+		<id column="vehicle_styles_tag" property="vehicleStylesTag" />
+		<id column="vehicle_marker_mot" property="vehicleMarkerMot" />
+		<id column="vehicle_marker_tissuebox"
+			property="vehicleMarkerTissuebox" />
+		<id column="vehicle_marker_pendant" property="vehicleMarkerPendant" />
+		<id column="sunvisor" property="sunvisor" />
+		<id column="safety_belt" property="safetyBelt" />
+		<id column="safety_belt_copilot" property="safetyBeltCopilot" />
+		<id column="cap_location" property="capLocation" />
+		<id column="cap_url" property="capUrl" />
+		<id column="scene_url" property="seceneUrl" />
+		<id column="video_url" property="videoUrl" />
+		<id column="is_deleted" property="isDeleted" />
+		<id column="create_user" property="createUser" />
+		<id column="create_time" property="createTime" />
+		<id column="modify_user" property="modifyUser" />
+		<id column="modify_time" property="modifyTime" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,type,device_id,cap_time,plate_no,vehicle_color,orientation,plate_color,vehicle_class,vehicle_brand_tag,vehicle_model_tag,vehicle_styles_tag,vehicle_marker_mot,vehicle_marker_tissuebox,vehicle_marker_pendant,sunvisor,safety_belt,safety_belt_copilot,safety_belt_copilot,cap_url,scene_url,cap_location,video_url,is_deleted,create_user,create_time,modify_user,modify_time
+	</sql>
+	<insert id="saveCapMotor">
+		insert into
+		cap_motor(uuid,type,device_id,cap_time,plate_no,vehicle_color,orientation,plate_color,vehicle_class,vehicle_brand_tag,vehicle_model_tag,vehicle_styles_tag,vehicle_marker_mot,vehicle_marker_tissuebox,vehicle_marker_pendant,sunvisor,safety_belt,safety_belt_copilot,safety_belt_copilot,cap_url,scene_url,video_url,is_deleted,create_user,create_time,modify_user,modify_time)
+		values(
+		#{uuid},#{type},#{deviceId},#{capTime},#{plateNo},#{vehicleColor},#{orientation},#{plateColor},#{vehicleClass},#{vehicleBrandTag},#{vehicleModel},#{vehicleStyles},#{vehicleMarkerMot},#{vehicleMarkerTissuebox},#{vehicleMarkerPendant},#{sunvisor},#{safetyBelt},#{seatbeltCopilot},#{safetyBeltCopilot},#{capUrl},#{#seceneUrl},#{videoUrl},#{isDeleted},#{createUser},#{createTime},#{modifyUser},#{modifyTime}
+		)
+	</insert>
+	<select id="getMotorVehicle" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from motor_vehicle
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeCapMotor">
+		delete from cap_motor
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateCapMotor">
+		update cap_motor set
+		type=#{type},device_id=#{deviceId},cap_time=#{capTime},plate_no=#{plateNo},vehicle_color=#{vehicleColor},orientation=#{orientation},plate_color=#{plateColor},vehicle_class=#{vehicleClass},vehicle_brand_tag=#{vehicleBrandTag},vehicle_model_tag=#{vehicleModel},vehicle_styles_tag=#{vehicleStyles},vehicle_marker_mot=#{vehicleMarkerMot},vehicle_marker_tissuebox=#{vehicleMarkerTissuebox},vehicle_marker_pendant=#{vehicleMarkerPendant},sunvisor=#{sunvisor},safety_belt=#{safetyBelt},safety_belt_copilot=#{seatbeltCopilot},safety_belt_copilot=#{safetyBeltCopilot},cap_url=#{capUrl},scene_url=#{seceneUrl},video_url=#{videoUrl},is_deleted=#{isDeleted},create_user=#{createUser},create_time=#{createTime},modify_user=#{modifyUser},modify_time=#{modifyTime}
+		where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from cap_motor
+		<where>
+			<if test="f.typeFrom != null and f.typeFrom != '' ">
+				and type &gt;=#{f.typeFrom}
+			</if>
+			<if test="f.typeEnd != null and f.typeEnd != '' ">
+				and type &lt;= #{f.typeEnd}
+			</if>
+			<if test="deviceId != null and f.deviceId != '' ">
+				and device_id like CONCAT('%',#{f.deviceId},'%')
+			</if>
+			<if test="f.capTimeFrom != null and f.capTimeFrom != '' ">
+				and cap_time &gt;=#{f.capTimeFrom}
+			</if>
+			<if test="f.capTimeEnd != null and f.capTimeEnd != '' ">
+				and cap_time &lt;= #{f.capTimeEnd}
+			</if>
+			<if test="f.plateNo != null and f.plateNo != '' ">
+				and plate_no like CONCAT('%',#{f.plateNo},'%')
+			</if>
+			<if
+				test="f.vehicleColorFrom != null and f.vehicleColorFrom != '' ">
+				and vehicle_color &gt;=#{f.vehicleColorFrom}
+			</if>
+			<if test="f.vehicleColorEnd != null and f.vehicleColorEnd != '' ">
+				and vehicle_color &lt;= #{f.vehicleColorEnd}
+			</if>
+			<if test="f.orientationFrom != null and f.orientationFrom != '' ">
+				and orientation &gt;=#{f.orientationFrom}
+			</if>
+			<if test="f.orientationEnd != null and f.orientationEnd != '' ">
+				and orientation &lt;= #{f.orientationEnd}
+			</if>
+			<if test="f.plateColorFrom != null and f.plateColorFrom != '' ">
+				and plate_color &gt;=#{f.plateColorFrom}
+			</if>
+			<if test="f.plateColorEnd != null and f.plateColorEnd != '' ">
+				and plate_color &lt;= #{f.plateColorEnd}
+			</if>
+			<if
+				test="f.vehicleClassFrom != null and f.vehicleClassFrom != '' ">
+				and vehicle_class &gt;=#{f.vehicleClassFrom}
+			</if>
+			<if test="f.vehicleClassEnd != null and f.vehicleClassEnd != '' ">
+				and vehicle_class &lt;= #{f.vehicleClassEnd}
+			</if>
+			<if
+				test="f.vehicleBrandTagFrom != null and f.vehicleBrandTagFrom != '' ">
+				and vehicle_brand_tag &gt;=#{f.vehicleBrandTagFrom}
+			</if>
+			<if
+				test="f.vehicleBrandTagEnd != null and f.vehicleBrandTagEnd != '' ">
+				and vehicle_brand_tag &lt;= #{f.vehicleBrandTagEnd}
+			</if>
+			<if
+				test="f.vehicleModelFrom != null and f.vehicleModelFrom != '' ">
+				and vehicle_model_tag &gt;=#{f.vehicleModelFrom}
+			</if>
+			<if test="f.vehicleModelEnd != null and f.vehicleModelEnd != '' ">
+				and vehicle_model_tag &lt;= #{f.vehicleModelEnd}
+			</if>
+			<if
+				test="f.vehicleStylesFrom != null and f.vehicleStylesFrom != '' ">
+				and vehicle_styles_tag &gt;=#{f.vehicleStylesFrom}
+			</if>
+			<if
+				test="f.vehicleStylesEnd != null and f.vehicleStylesEnd != '' ">
+				and vehicle_styles_tag &lt;= #{f.vehicleStylesEnd}
+			</if>
+			<if
+				test="f.vehicleMarkerMotFrom != null and f.vehicleMarkerMotFrom != '' ">
+				and vehicle_marker_mot &gt;=#{f.vehicleMarkerMotFrom}
+			</if>
+			<if
+				test="f.vehicleMarkerMotEnd != null and f.vehicleMarkerMotEnd != '' ">
+				and vehicle_marker_mot &lt;= #{f.vehicleMarkerMotEnd}
+			</if>
+			<if
+				test="f.vehicleMarkerTissueboxFrom != null and f.vehicleMarkerTissueboxFrom != '' ">
+				and vehicle_marker_tissuebox
+				&gt;=#{f.vehicleMarkerTissueboxFrom}
+			</if>
+			<if
+				test="f.vehicleMarkerTissueboxEnd != null and f.vehicleMarkerTissueboxEnd != '' ">
+				and vehicle_marker_tissuebox &lt;=
+				#{f.vehicleMarkerTissueboxEnd}
+			</if>
+			<if
+				test="f.vehicleMarkerPendantFrom != null and f.vehicleMarkerPendantFrom != '' ">
+				and vehicle_marker_pendant &gt;=#{f.vehicleMarkerPendantFrom}
+			</if>
+			<if
+				test="f.vehicleMarkerPendantEnd != null and f.vehicleMarkerPendantEnd != '' ">
+				and vehicle_marker_pendant &lt;= #{f.vehicleMarkerPendantEnd}
+			</if>
+			<if test="f.sunvisorFrom != null and f.sunvisorFrom != '' ">
+				and sunvisor &gt;=#{f.sunvisorFrom}
+			</if>
+			<if test="f.sunvisorEnd != null and f.sunvisorEnd != '' ">
+				and sunvisor &lt;= #{f.sunvisorEnd}
+			</if>
+			<if test="f.safetyBeltFrom != null and f.safetyBeltFrom != '' ">
+				and safety_belt &gt;=#{f.safetyBeltFrom}
+			</if>
+			<if test="f.safetyBeltEnd != null and f.safetyBeltEnd != '' ">
+				and safety_belt &lt;= #{f.safetyBeltEnd}
+			</if>
+			<if
+				test="f.seatbeltCopilotFrom != null and f.seatbeltCopilotFrom != '' ">
+				and safety_belt_copilot &gt;=#{f.seatbeltCopilotFrom}
+			</if>
+			<if
+				test="f.seatbeltCopilotEnd != null and f.seatbeltCopilotEnd != '' ">
+				and safety_belt_copilot &lt;= #{f.seatbeltCopilotEnd}
+			</if>
+			<if
+				test="f.safetyBeltCopilotFrom != null and f.safetyBeltCopilotFrom != '' ">
+				and safety_belt_copilot &gt;=#{f.safetyBeltCopilotFrom}
+			</if>
+			<if
+				test="f.safetyBeltCopilotEnd != null and f.safetyBeltCopilotEnd != '' ">
+				and safety_belt_copilot &lt;= #{f.safetyBeltCopilotEnd}
+			</if>
+			<if test="f.capUrl != null and f.capUrl != '' ">
+				and cap_url like CONCAT('%',#{f.capUrl},'%')
+			</if>
+			<if test="f.videoUrl != null and f.videoUrl != '' ">
+				and video_url like CONCAT('%',#{f.videoUrl},'%')
+			</if>
+			<if test="f.isDeletedFrom != null and f.isDeletedFrom != '' ">
+				and is_deleted &gt;=#{f.isDeletedFrom}
+			</if>
+			<if test="f.isDeletedEnd != null and f.isDeletedEnd != '' ">
+				and is_deleted &lt;= #{f.isDeletedEnd}
+			</if>
+			<if test="f.createUser != null and f.createUser != '' ">
+				and create_user like CONCAT('%',#{f.createUser},'%')
+			</if>
+			<if test="f.createTimeFrom != null and f.createTimeFrom != '' ">
+				and create_time &gt;=#{f.createTimeFrom}
+			</if>
+			<if test="f.createTimeEnd != null and f.createTimeEnd != '' ">
+				and create_time &lt;= #{f.createTimeEnd}
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from cap_motor
+		<where>
+			<if test="f.typeFrom != null and f.typeFrom != '' ">
+				and type &gt;=#{f.typeFrom}
+			</if>
+			<if test="f.typeEnd != null and f.typeEnd != '' ">
+				and type &lt;= #{f.typeEnd}
+			</if>
+			<if test="deviceId != null and deviceId != '' ">
+				and device_id like CONCAT('%',#{deviceId},'%')
+			</if>
+			<if test="f.capTimeFrom != null and f.capTimeFrom != '' ">
+				and cap_time &gt;=#{f.capTimeFrom}
+			</if>
+			<if test="f.capTimeEnd != null and f.capTimeEnd != '' ">
+				and cap_time &lt;= #{f.capTimeEnd}
+			</if>
+			<if test="f.plateNo != null and f.plateNo != '' ">
+				and plate_no like CONCAT('%',#{f.plateNo},'%')
+			</if>
+			<if
+				test="f.vehicleColorFrom != null and f.vehicleColorFrom != '' ">
+				and vehicle_color &gt;=#{f.vehicleColorFrom}
+			</if>
+			<if test="f.vehicleColorEnd != null and f.vehicleColorEnd != '' ">
+				and vehicle_color &lt;= #{f.vehicleColorEnd}
+			</if>
+			<if test="f.orientationFrom != null and f.orientationFrom != '' ">
+				and orientation &gt;=#{f.orientationFrom}
+			</if>
+			<if test="f.orientationEnd != null and f.orientationEnd != '' ">
+				and orientation &lt;= #{f.orientationEnd}
+			</if>
+			<if test="f.plateColorFrom != null and f.plateColorFrom != '' ">
+				and plate_color &gt;=#{f.plateColorFrom}
+			</if>
+			<if test="f.plateColorEnd != null and f.plateColorEnd != '' ">
+				and plate_color &lt;= #{f.plateColorEnd}
+			</if>
+			<if
+				test="f.vehicleClassFrom != null and f.vehicleClassFrom != '' ">
+				and vehicle_class &gt;=#{f.vehicleClassFrom}
+			</if>
+			<if test="f.vehicleClassEnd != null and f.vehicleClassEnd != '' ">
+				and vehicle_class &lt;= #{f.vehicleClassEnd}
+			</if>
+			<if
+				test="f.vehicleBrandTagFrom != null and f.vehicleBrandTagFrom != '' ">
+				and vehicle_brand_tag &gt;=#{f.vehicleBrandTagFrom}
+			</if>
+			<if
+				test="f.vehicleBrandTagEnd != null and f.vehicleBrandTagEnd != '' ">
+				and vehicle_brand_tag &lt;= #{f.vehicleBrandTagEnd}
+			</if>
+			<if
+				test="f.vehicleModelFrom != null and f.vehicleModelFrom != '' ">
+				and vehicle_model_tag &gt;=#{f.vehicleModelFrom}
+			</if>
+			<if test="f.vehicleModelEnd != null and f.vehicleModelEnd != '' ">
+				and vehicle_model_tag &lt;= #{f.vehicleModelEnd}
+			</if>
+			<if
+				test="f.vehicleStylesFrom != null and f.vehicleStylesFrom != '' ">
+				and vehicle_styles_tag &gt;=#{f.vehicleStylesFrom}
+			</if>
+			<if
+				test="f.vehicleStylesEnd != null and f.vehicleStylesEnd != '' ">
+				and vehicle_styles_tag &lt;= #{f.vehicleStylesEnd}
+			</if>
+			<if
+				test="f.vehicleMarkerMotFrom != null and f.vehicleMarkerMotFrom != '' ">
+				and vehicle_marker_mot &gt;=#{f.vehicleMarkerMotFrom}
+			</if>
+			<if
+				test="f.vehicleMarkerMotEnd != null and f.vehicleMarkerMotEnd != '' ">
+				and vehicle_marker_mot &lt;= #{f.vehicleMarkerMotEnd}
+			</if>
+			<if
+				test="f.vehicleMarkerTissueboxFrom != null and f.vehicleMarkerTissueboxFrom != '' ">
+				and vehicle_marker_tissuebox
+				&gt;=#{f.vehicleMarkerTissueboxFrom}
+			</if>
+			<if
+				test="f.vehicleMarkerTissueboxEnd != null and f.vehicleMarkerTissueboxEnd != '' ">
+				and vehicle_marker_tissuebox &lt;=
+				#{f.vehicleMarkerTissueboxEnd}
+			</if>
+			<if
+				test="f.vehicleMarkerPendantFrom != null and f.vehicleMarkerPendantFrom != '' ">
+				and vehicle_marker_pendant &gt;=#{f.vehicleMarkerPendantFrom}
+			</if>
+			<if
+				test="f.vehicleMarkerPendantEnd != null and f.vehicleMarkerPendantEnd != '' ">
+				and vehicle_marker_pendant &lt;= #{f.vehicleMarkerPendantEnd}
+			</if>
+			<if test="f.sunvisorFrom != null and f.sunvisorFrom != '' ">
+				and sunvisor &gt;=#{f.sunvisorFrom}
+			</if>
+			<if test="f.sunvisorEnd != null and f.sunvisorEnd != '' ">
+				and sunvisor &lt;= #{f.sunvisorEnd}
+			</if>
+			<if test="f.safetyBeltFrom != null and f.safetyBeltFrom != '' ">
+				and safety_belt &gt;=#{f.safetyBeltFrom}
+			</if>
+			<if test="f.safetyBeltEnd != null and f.safetyBeltEnd != '' ">
+				and safety_belt &lt;= #{f.safetyBeltEnd}
+			</if>
+			<if
+				test="f.seatbeltCopilotFrom != null and f.seatbeltCopilotFrom != '' ">
+				and safety_belt_copilot &gt;=#{f.seatbeltCopilotFrom}
+			</if>
+			<if
+				test="f.seatbeltCopilotEnd != null and f.seatbeltCopilotEnd != '' ">
+				and safety_belt_copilot &lt;= #{f.seatbeltCopilotEnd}
+			</if>
+			<if
+				test="f.safetyBeltCopilotFrom != null and f.safetyBeltCopilotFrom != '' ">
+				and safety_belt_copilot &gt;=#{f.safetyBeltCopilotFrom}
+			</if>
+			<if
+				test="f.safetyBeltCopilotEnd != null and f.safetyBeltCopilotEnd != '' ">
+				and safety_belt_copilot &lt;= #{f.safetyBeltCopilotEnd}
+			</if>
+			<if test="f.capUrl != null and f.capUrl != '' ">
+				and cap_url like CONCAT('%',#{f.capUrl},'%')
+			</if>
+			<if test="f.videoUrl != null and f.videoUrl != '' ">
+				and video_url like CONCAT('%',#{f.videoUrl},'%')
+			</if>
+			<if test="f.isDeletedFrom != null and f.isDeletedFrom != '' ">
+				and is_deleted &gt;=#{f.isDeletedFrom}
+			</if>
+			<if test="f.isDeletedEnd != null and f.isDeletedEnd != '' ">
+				and is_deleted &lt;= #{f.isDeletedEnd}
+			</if>
+			<if test="f.createUser != null and f.createUser != '' ">
+				and create_user like CONCAT('%',#{f.createUser},'%')
+			</if>
+			<if test="f.createTimeFrom != null and f.createTimeFrom != '' ">
+				and create_time &gt;=#{f.createTimeFrom}
+			</if>
+			<if test="f.createTimeEnd != null and f.createTimeEnd != '' ">
+				and create_time &lt;= #{f.createTimeEnd}
+			</if>
+		</where>
+	</select>
+</mapper>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ICmpLogsDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.CmpLogs">
+		<id column="uuid" property="uuid" />
+		<id column="device_id" property="deviceId" />
+		<id column="capture_uuid" property="captureUuid" />
+		<id column="cmp_time" property="cmpTime" />
+		<id column="cmp_score" property="cmpScore" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,device_id,capture_uuid,cmp_time,cmp_score
+	</sql>
+	<insert id="saveCmpLogs">
+	   insert into cmp_logs(uuid,device_id,capture_uuid,cmp_time,cmp_score)
+	   values(
+		   #{uuid},#{deviceId},#{captureUuid},#{cmpTime},#{cmpScore}
+	   )
+	</insert>
+	<select id="getCmpLogs" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from cmp_logs
+		where id = #{id}
+	</select>
+	<delete id="removeCmpLogs">
+		delete from cmp_logs
+		where id = #{id}
+	</delete>
+	<update id="updateCmpLogs">
+	   update cmp_logs set device_id=#{deviceId},capture_uuid=#{captureUuid},cmp_time=#{cmpTime},cmp_score=#{cmpScore}
+	   where id=#{id}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from cmp_logs
+		<where>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(id)
+		from cmp_logs
+		<where>
+		</where>
+	</select>
+</mapper>

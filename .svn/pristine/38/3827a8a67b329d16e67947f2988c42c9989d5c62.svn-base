@@ -1,0 +1,546 @@
+<?xml version="1.0" encoding="UTF-8" ?><!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IJobsDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.Jobs">
+		<id column="uuid" property="uuid" />
+		<id column="name" property="name" />
+		<id column="type" property="type" />
+		<id column="state" property="state" />
+		<id column="jobs_type" property="jobsType" />
+		<id column="cap_people" property="capPeople" />
+		<id column="cap_nonmotor" property="capNonmotor" />
+		<id column="cap_motor" property="capMotor" />
+		<id column="begin_time" property="beginTime" />
+		<id column="end_time" property="endTime" />
+		<id column="begin_date" property="beginDate" />
+		<id column="end_date" property="endDate" />
+		<id column="alarm_type" property="alarmType" />
+		<id column="score" property="score" />
+		<id column="memo" property="memo" />
+		<id column="ratify_result" property="ratifyResult" />
+		<id column="ratify_user" property="ratifyUser" />
+		<id column="ratify_memo" property="ratifyMemo" />
+		<id column="ratify_time" property="ratifyTime" />
+		<id column="ratify_type" property="ratifyType" />
+		<id column="is_deleted" property="isDeleted" />
+		<id column="create_user" property="createUser" />
+		<id column="create_time" property="createTime" />
+		<id column="modify_user" property="modifyUser" />
+		<id column="modify_time" property="modifyTime" />
+		<id column="run_week" property="runWeek" />
+		<id column="level" property="level" />
+		<id column="cancel_job_reason" property="cancelJobReason" />
+		<id column="alarm_sound" property="alarmSound" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,name,type,state,jobs_type,cap_people,cap_nonmotor,cap_motor,begin_time,end_time,begin_date,end_date,alarm_type,score,memo,ratify_result,ratify_user,ratify_memo,ratify_time,is_deleted,create_user,create_time,modify_user,modify_time,run_week,level,ratify_type,alarm_sound
+	</sql>
+	<insert id="saveJobs">
+		insert into
+		jobs(uuid,name,type,state,jobs_type,cap_people,cap_nonmotor,cap_motor,begin_time,end_time,begin_date,end_date,alarm_type,score,memo,ratify_result,ratify_user,ratify_memo,ratify_type,ratify_time,create_user,create_time,modify_user,modify_time,run_week,level,alarm_sound)
+		values(
+		#{uuid},#{name},#{type},#{state},#{jobsType},#{capPeople},#{capNonmotor},#{capMotor},#{beginTime},#{endTime},#{beginDate},#{endDate},#{alarmType},#{score},#{memo},0,#{ratifyUser},#{ratifyMemo},0,#{ratifyTime},#{createUser},now(),#{modifyUser},#{modifyTime},#{runWeek},#{level},#{alarmSound}
+		)
+	</insert>
+	<select id="getJobs" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from jobs
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeJobs">
+		delete from jobs
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateCommon">
+		update jobs
+		set
+		name=#{name},
+		begin_time=#{beginTime},
+		begin_date=#{beginDate},
+		end_time=#{endTime},
+		end_date=#{endDate},
+		alarm_type=#{alarmType},
+		memo=#{memo},
+		modify_user=#{modifyUser},
+		run_week=#{runWeek},
+		level=#{level},
+		ratify_result=#{ratifyResult},
+		ratify_user=#{ratifyUser},
+		ratify_memo=#{ratifyMemo},
+		ratify_type=#{ratifyType},
+		alarm_sound=#{alarmSound},
+		modify_time=now()
+		where uuid=#{uuid}
+	</update>
+
+	<!-- lxh (j.ratify_result = 1 or (j.ratify_result = 0 and j.ratify_type 
+		= 1) or (j.ratify_result = 2 and j.ratify_type = 1)) 布控列表显示的是审批通过的列表 或者 撤控审批未通过 -->
+	<!-- state 布控状态 10:待启动 20:布控中 30:暂停中 40:休息中 50:已撤控 60:撤控中 70:已完成 -->
+	<select id="jobList" resultType="com.sensing.core.bean.job.resp.JobListResp">
+		SET SESSION group_concat_max_len=18446744073709551615;
+		
+		select
+			j.uuid as uuid,
+			j.name as jobName,
+			j.state as state,
+			j.ratify_result as ratifyResult,
+			j.is_deleted as isDeleted,
+			j.level,
+			j.score,
+			j.begin_time as beginTime,
+			j.end_time as endTime,
+			j.begin_date as beginDate,
+			j.end_date as endDate,
+			j.run_week as runWeek,
+			j.create_time as createTime,
+			j.create_user as createUser,
+			(select count(1) from sys_subscribe ss where ss.job_id=j.uuid and ss.uid = #{f.uuid}) as subscribe,
+			su.username as createUsername,
+			(select GROUP_CONCAT(c1.channel_name order by c1.uuid) from channel c1, jobs_channel jc1 where j.uuid = jc1.job_uuid and c1.uuid = jc1.channel_uuid and c1.is_del !=1) as channelname,
+			(select COUNT(1) from channel c1, jobs_channel jc1 where j.uuid = jc1.job_uuid and c1.uuid = jc1.channel_uuid and c1.is_del !=1) as channelCount,
+			(select GROUP_CONCAT(td1.template_db_name) from template_db td1,jobs_templatedb jt1 where j.uuid = jt1.job_uuid and td1.id = jt1.templatedb_id) as templatename
+		from 
+			jobs j,sys_user su
+		<where>
+			su.uuid = j.create_user
+			and (j.ratify_result = 1 or (j.ratify_result = 0 and j.ratify_type = 1) or (j.ratify_result = 2 and j.ratify_type = 1))
+			<if test="f.state != null and f.state != '' ">
+				and j.state =#{f.state}
+			</if>
+			<if test="f.name != null and f.name != '' ">
+				and j.name like CONCAT('%',#{f.name},'%')
+			</if>
+			<if test="f.level != null and f.level != '' ">
+				and j.level =#{f.level}
+			</if>
+			<if test="f.querytype != null and f.querytype == 1 ">
+				and j.create_user = #{f.uuid}
+			</if>
+			and j.is_deleted != 1
+		</where>
+		order by j.create_time desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+
+	<select id="jobListCount" resultType="int">
+		select 
+			count(j.uuid)
+		from 
+			jobs j
+		<where>
+			and (j.ratify_result = 1 or (j.ratify_result = 0 and j.ratify_type = 1) or (j.ratify_result = 2 and j.ratify_type = 1))
+			<if test="f.state != null and f.state != '' ">
+				and j.state =#{f.state}
+			</if>
+			<if test="f.name != null and f.name != '' ">
+				and j.name like CONCAT('%',#{f.name},'%')
+			</if>
+			<if test="f.level != null and f.level != '' ">
+				and j.level =#{f.level}
+			</if>
+			<if test="f.querytype != null and f.querytype == 1 ">
+				and j.create_user = #{f.uuid}
+			</if>
+			and j.is_deleted != 1
+		</where>
+	</select>
+
+	<select id="jobListByName"
+		resultType="com.sensing.core.bean.job.resp.JobListResp">
+		SET SESSION group_concat_max_len=18446744073709551615;
+		select 
+			tab.*
+		from 
+			(select 
+				j.uuid as uuid,
+				j.name as jobName,
+				j.state as state,
+				j.ratify_result as ratifyResult,
+				j.is_deleted as isDeleted,
+				j.level,
+				j.score,
+				j.begin_time as beginTime,
+				j.end_time as endTime,
+				j.begin_date as beginDate,
+				j.end_date as endDate,
+				j.run_week as runWeek,
+				j.create_user as createUser,
+				j.create_time as createTime,
+				(select count(*) from sys_subscribe ss where ss.job_id = j.uuid and ss.uid = #{f.uuid}) as subscribe,
+				(select su.username from sys_user su where su.uuid = j.create_user) as createUsername,
+				(select GROUP_CONCAT(c1.channel_name order by c1.uuid) from channel c1, jobs_channel jc1 where j.uuid = jc1.job_uuid and c1.uuid = jc1.channel_uuid ) as channelname,
+				(select count(1) from channel c1, jobs_channel jc1 where j.uuid = jc1.job_uuid and c1.uuid = jc1.channel_uuid ) as channelCount,
+				(select GROUP_CONCAT(td1.template_db_name) from template_db td1, jobs_templatedb jt1 where j.uuid = jt1.job_uuid and td1.id = jt1.templatedb_id) as templatename 
+			from jobs j
+			where
+				(j.ratify_result = 1 or (j.ratify_result = 0 and j.ratify_type = 1) or (j.ratify_result = 2 and j.ratify_type = 1) )
+				<if test="f.state != null and f.state != '' ">
+					and j.state =#{f.state}
+				</if>
+				<if test="f.level != null and f.level != '' ">
+					and j.level =#{f.level}
+				</if>
+				<if test="f.querytype != null and f.querytype == 1 ">
+					and j.create_user = #{f.uuid}
+				</if>
+					and j.is_deleted != 1
+			) tab
+		WHERE 
+			LOCATE( CONCAT(#{f.name}),tab.channelname)>0
+			OR LOCATE( CONCAT(#{f.name}),tab.jobName)>0
+		order by tab.createTime desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+
+	<select id="jobListByNameCount" resultType="int">
+		select 
+			count(*)
+		from 
+			(select 
+				j.name as jobName, 
+				(select GROUP_CONCAT(c1.channel_name) from channel c1, jobs_channel jc1 where j.uuid = jc1.job_uuid and c1.uuid = jc1.channel_uuid) as channelname 
+			from 
+				jobs j
+			where 
+				(j.ratify_result = 1 or (j.ratify_result = 0 and j.ratify_type = 1) or (j.ratify_result = 2 and j.ratify_type = 1))
+				<if test="f.state != null and f.state != '' ">
+					and j.state =#{f.state}
+				</if>
+				<if test="f.level != null and f.level != '' ">
+					and j.level =#{f.level}
+				</if>
+				<if test="f.querytype != null and f.querytype == 1 ">
+					and j.create_user = #{f.uuid}
+				</if>
+				and j.is_deleted != 1
+			) tab
+		WHERE 
+			LOCATE( CONCAT(#{f.name}),tab.channelname)>0
+			OR LOCATE( CONCAT(#{f.name}),tab.jobName)>0
+	</select>
+
+	<!--得到布控管理列表 -->
+	<select id="jobListCommon" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from jobs j
+		<where>
+			and (j.ratify_result = 1 or (j.ratify_result = 0 and j.ratify_type = 1)
+			or (j.ratify_result = 2 and
+			j.ratify_type = 1))
+			and j.is_deleted != 1
+		</where>
+	</select>
+
+	<!-- 布控管理 querytype 0：审批列表只能看到审批人为当前用户的 1：当前用户自己的申请列表 -->
+	<select id="ratifyList"
+		resultType="com.sensing.core.bean.job.resp.JobRatifyListResp">
+
+		select
+		j.uuid as jobUuid,
+		j.name AS name,
+		j.create_time AS createTime,
+		j.ratify_time AS ratifyTime,
+		j.ratify_result AS ratifyResult,
+		j.ratify_type AS ratifyType,
+		j.state AS state,
+		j.jobs_type AS jobsType,
+		j.level AS level,
+		j.create_time,
+		(select su.username from sys_user su where su.uuid =
+		j.create_user) AS
+		createUserName,
+		(select su.username from sys_user su
+		where su.uuid = j.ratify_user) AS
+		ratifyUserName
+		from jobs j
+		left join
+		sys_user su on j.create_user = su.uuid
+		where 1 = 1
+		<if test="f.ratifyResult != null and f.ratifyResult != '' ">
+			and j.ratify_result = #{f.ratifyResult}
+		</if>
+		<if test="f.name != null and f.name != '' ">
+			and (LOCATE( CONCAT(#{f.name}),su.username)>0 or LOCATE(
+			CONCAT(#{f.name}),j.name)>0)
+		</if>
+		<if test="f.level != null and f.level != '' ">
+			and j.level = #{f.level}
+		</if>
+		<if
+			test="f.startTime != null and f.startTime != '' and f.endTime != null and f.endTime != '' ">
+			and j.create_time >= #{f.startTime}
+            <![CDATA[
+            and j.create_time < #{f.endTime}
+            ]]>
+		</if>
+		<if test="f.jobsType != null and f.jobsType != '' ">
+			and j.jobs_type = #{f.jobsType}
+		</if>
+		<if test="f.querytype != null and f.querytype == 1 ">
+			and j.create_user = #{f.uuid}
+		</if>
+		<if test="f.querytype != null and f.querytype == 0 ">
+			and j.ratify_user = #{f.uuid}
+		</if>
+
+		and j.is_deleted != 1
+		order by j.create_time desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+
+	</select>
+	<select id="ratifyListCount" resultType="int">
+
+		select
+		count(*)
+		from jobs j
+		left join sys_user su on j.create_user =
+		su.uuid
+		where 1 = 1
+		<if test="f.ratifyResult != null and f.ratifyResult != '' ">
+			and j.ratify_result = #{f.ratifyResult}
+		</if>
+		<if test="f.name != null and f.name != '' ">
+			and (LOCATE( CONCAT(#{f.name}),su.username)>0 or LOCATE(
+			CONCAT(#{f.name}),j.name)>0)
+		</if>
+		<if test="f.level != null and f.level != '' ">
+			and j.level = #{f.level}
+		</if>
+		<if
+			test="f.startTime != null and f.startTime != '' and f.endTime != null and f.endTime != '' ">
+			and j.create_time >= #{f.startTime}
+            <![CDATA[
+            and j.create_time < #{f.endTime}
+            ]]>
+		</if>
+		<if test="f.jobsType != null and f.jobsType != '' ">
+			and j.jobs_type = #{f.jobsType}
+		</if>
+		<if test="f.querytype != null and f.querytype == 1 ">
+			and j.create_user = #{f.uuid}
+		</if>
+		<if test="f.querytype != null and f.querytype == 0 ">
+			and j.ratify_user = #{f.uuid}
+		</if>
+		and j.is_deleted != 1
+		order by j.create_time desc
+	</select>
+
+
+	<select id="selectTemplatedbIdCount" resultType="int">
+<!-- 		select -->
+<!-- 		count(templatedb_id) -->
+<!-- 		from jobs_templatedb -->
+<!-- 		where templatedb_id = -->
+<!-- 		#{templatedbId} -->
+		SELECT
+			count( 1 ) 
+		FROM
+			`jobs_templatedb` jt
+		LEFT JOIN jobs j ON j.uuid = jt.job_uuid 
+		WHERE
+			j.state IN ( 10, 20, 30, 40 ) 
+		AND j.is_deleted = 0 
+		AND jt.templatedb_id = #{templatedbId}
+	</select>
+	<select id="getObjUuidByJobsUuid" resultType="String">
+		select
+		obj_uuid
+		from
+		jobs_templatedb
+		where job_uuid =
+		#{jobsUuid}
+	</select>
+	<select id="selectTemplatedbIdCountByObjUuid" resultType="int">
+		select
+		count(templatedb_id)
+		from jobs_templatedb
+		where obj_uuid = #{objUuid}
+	</select>
+
+	<update id="updateOperate"
+		parameterType="com.sensing.core.bean.job.req.UpdateOperateReq">
+		update jobs
+		<set>
+			<if test="state !=null">
+				state=#{state},
+			</if>
+			<if test="isDeleted !=null">
+				is_deleted=#{isDeleted},
+			</if>
+			<if test="ratifyResult !=null">
+				ratify_result=#{ratifyResult},
+			</if>
+			<if test="ratifyMemo !=null">
+				ratify_memo=#{ratifyMemo},
+			</if>
+			<if test="ratifyType !=null">
+				ratify_type=#{ratifyType},
+			</if>
+			<if test="cancelJobReason !=null and cancelJobReason !=''">
+				cancel_job_reason=#{cancelJobReason},
+			</if>
+			modify_time=now()
+		</set>
+		where uuid=#{jobUuid}
+	</update>
+
+	<update id="ratifyJob"
+		parameterType="com.sensing.core.bean.job.req.UpdateJobReq">
+		update jobs
+		<set>
+			<if test="ratifyResult !=null">
+				ratify_result=#{ratifyResult},
+			</if>
+			<if test="ratifyMemo !=null">
+				ratify_memo=#{ratifyMemo},
+			</if>
+			<if test="ratifyUser !=null">
+				ratify_user=#{ratifyUser},
+			</if>
+			<if test="state !=null">
+				state=#{state},
+			</if>
+			modify_time=now(),
+			ratify_time=now()
+		</set>
+		where uuid=#{jobUuid}
+	</update>
+
+	<select id="getJobsByJobName" resultType="int">
+		select
+		count(*)
+		from jobs
+		where name = #{name} and is_deleted != 1
+		<if test="uuid != null and uuid != '' ">
+			and uuid != #{uuid}
+		</if>
+	</select>
+
+	<insert id="saveJobsTempleteBetch">
+		insert into jobs_templatedb(uuid,job_uuid,templatedb_id,obj_uuid)
+		values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(
+			#{item.uuid},#{item.job_uuid},#{item.templatedb_id},#{item.obj_uuid}
+			)
+		</foreach>
+
+	</insert>
+
+	<delete id="removeTempleteChannel">
+		delete from jobs_templatedb
+		where job_uuid = #{uuid}
+	</delete>
+
+	<select id="getUpdateStateJob" resultMap="resultMap"
+		parameterType="java.util.List">
+		select
+		<include refid="column_list" />
+		FROM jobs j WHERE j.state IN
+		<foreach item="item" index="index" collection="list" open="("
+			separator="," close=")">
+			#{item}
+		</foreach>
+		and (j.ratify_result = 1 or (j.ratify_result = 0 and j.ratify_type =
+		1) or (j.ratify_result = 2 and j.ratify_type = 1))
+		and j.is_deleted=0
+	</select>
+
+
+    <!-- isPreState 为1 布控状态 10:待启动 20:布控中  30:暂停中 40:休息中 50:已撤控  60:撤控中 70:已完成 -->
+	<update id="updateStateBetch" parameterType="java.util.List">
+		<foreach collection="list" item="item" index="index"
+			separator=";">
+			update jobs
+			set
+            <choose>
+                <when test="item.isPreState!=null and item.isPreState == 1 ">
+                    state = 30,
+                </when>
+                <otherwise>
+                    state = #{item.newState},
+                </otherwise>
+            </choose>
+
+            modify_time=now()
+			WHERE uuid = #{item.uuid}
+		</foreach>
+	</update>
+
+	<select id="info" resultType="com.sensing.core.bean.job.resp.JobListResp" parameterType="com.sensing.core.bean.job.req.UpdateJobReq">
+		SET SESSION group_concat_max_len=18446744073709551615;
+		select
+			j.uuid as uuid,
+			j.name as jobName,
+			j.state as state,
+			j.memo as memo,
+			j.ratify_result as ratifyResult,
+			j.ratify_memo as ratifyMemo,
+			j.ratify_type as ratifyType,
+			j.cancel_job_reason as cancelJobReason,
+			j.is_deleted as isDeleted,
+			j.level,
+			j.alarm_sound as alarmSound,
+			j.score,
+			j.begin_time as beginTime,
+			j.end_time as endTime,
+			j.begin_date as beginDate,
+			j.end_date as endDate,
+			j.run_week as runWeek,
+			j.ratify_user as ratifyUser,
+			j.create_user as createUser,
+			j.ratify_time as ratifyTime,
+			j.create_time as createTime,
+			(select su.username from sys_user su where su.uuid = j.create_user) as createUsername,
+			(select su.username from sys_user su where su.uuid = j.ratify_user) as ratifyUsername,
+			(select GROUP_CONCAT(c1.channel_name) from channel c1, jobs_channel jc1 where j.uuid = jc1.job_uuid and c1.uuid = jc1.channel_uuid ) as channelname,
+			(select GROUP_CONCAT(td1.template_db_name) from template_db td1, jobs_templatedb jt1 where j.uuid = jt1.job_uuid and td1.id = jt1.templatedb_id and td1.is_deleted = 0) as templatename,
+			(select GROUP_CONCAT(c1.uuid) from channel c1, jobs_channel jc1 where j.uuid = jc1.job_uuid and c1.uuid = jc1.channel_uuid and c1.is_del !=1) as channelUuIdsStr,
+			(select GROUP_CONCAT(td1.id) from template_db td1, jobs_templatedb jt1 where j.uuid = jt1.job_uuid and td1.id = jt1.templatedb_id and td1.is_deleted = 0) as templatedbIdsStr,
+			(select GROUP_CONCAT(jt1.obj_uuid) from template_db td1, jobs_templatedb jt1 where j.uuid = jt1.job_uuid and td1.id = jt1.templatedb_id) as obj_uuid
+		from jobs j
+
+		<where>
+			1=1
+			<if test="jobUuid != null and jobUuid != '' ">
+				and j.uuid =#{jobUuid}
+			</if>
+			and j.is_deleted != 1
+		</where>
+
+	</select>
+
+	<select id="getJobsChannelByUuid"
+		resultType="com.sensing.core.bean.job.resp.JobListResp"
+		parameterType="com.sensing.core.bean.job.req.UpdateJobReq">
+
+		select jc.channel_uuid as uuid, c.channel_name as channelname
+		from jobs j
+		left join jobs_channel jc on j.uuid = jc.job_uuid
+		left join channel c on c.uuid = jc.channel_uuid
+		where j.uuid = #{jobUuid}
+
+	</select>
+
+	<select id="getPlateNoByJobUuid" resultType="java.util.HashMap">
+
+		select jt.job_uuid,tom.plate_no
+		from template_obj_motor tom
+		left join jobs_templatedb jt on tom.uuid = jt.obj_uuid
+		where jt.job_uuid in
+		<foreach collection="jobsUuids" item="item" index="index"
+			open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</select>
+</mapper>

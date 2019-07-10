@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!-- 告警数据保存 -->
+<mapper namespace="com.sensing.core.dao.IAlarmInfoDAO">
+	
+	<!-- 保存抓拍表 -->
+	<insert id="saveCapture">
+	   insert ignore capture(uuid,device_id,plate_no,identity_id,cap_type,cap_time,cap_url,device_area)
+	   values(
+		   #{uuid},#{deviceId},#{plateNo},#{identityId},#{capType},#{capTime},#{capUrl},#{deviceArea}
+	   )
+	   
+	</insert>
+	
+	<!-- 保存告警和抓拍的关联关系 -->	
+	<insert id="saveAlarmCmpLogs">
+	   insert into alarm_cmp_logs(uuid,alarm_uuid,cmp_uuid,cap_uuid,scene_url)
+	   values(
+		   #{uuid},#{alarmUuid},#{cmpUuid},#{capUuid},#{sceneUrl}
+	   )
+	</insert>
+	
+	<!-- 保存告警信息 -->	
+	<insert id="saveAlarm">
+	   insert into alarm(uuid,device_id,alarm_time,cap_time,cap_uuid,cmp_uuid,cmp_templatedb_id,cmp_obj_uuid,cmp_score,job_uuid,job_level,state,matched_count,alarm_id)
+	   values(
+		   #{uuid},#{deviceId},#{alarmTime},#{capTime},#{capUuid},#{cmpUuid},#{cmpTemplatedbId},#{cmpObjUuid},#{cmpScore},#{jobUuid},${jobLevel},#{state},#{matchedCount},#{alarmId}
+	   )
+	</insert>
+
+	<!-- 更新告警的信息 -->	
+	<update id="updateAlarm">
+		UPDATE alarm a
+		SET a.alarm_time = #{alarmTime},
+		 a.cap_time = #{capTime},
+		 a.cap_uuid = #{capUuid},
+		 a.job_level = #{jobLevel},
+		 a.matched_count = a.matched_count + 1
+		WHERE
+			a.uuid = #{uuid};
+	</update>
+	
+	<!-- 查询单条报警，获取报警的状态值 -->
+	<select id="queryByUuid"  resultType="java.lang.Integer">
+		SELECT
+			a.state
+		FROM
+			alarm a
+		WHERE
+			a.uuid = #{alarmUuid};
+	</select>
+
+	<!-- 保存告警相关的机动车的属性 -->
+	<insert id="saveMotorVehicle">
+		INSERT INTO motor_vehicle (uuid,type,device_id, cap_time, plate_no, vehicle_color, orientation, plate_color,plate_class, vehicle_class, vehicle_brand_tag, vehicle_model_tag, vehicle_styles_tag, vehicle_marker_mot, vehicle_marker_tissuebox, vehicle_marker_pendant, sunvisor, safety_belt, safety_belt_copilot, calling, cap_url,cap_location,scene_url, video_url, is_deleted, create_user, create_time, modify_user, modify_time) 
+		VALUES (
+			#{uuid},#{type},#{deviceId},#{capTime},#{plateNo},#{vehicleColor},#{orientation},#{plateColor},#{plateClass},#{vehicleClass},#{vehicleBrandTag},#{vehicleModelTag},#{vehicleStylesTag},#{vehicleMarkerMot},#{vehicleMarkerTissuebox},#{vehicleMarkerPendant},#{sunvisor},#{safetyBelt},#{safetyBeltCopilot},#{calling},#{capUrl},#{capLocation},#{sceneUrl},#{videoUrl},#{isDeleted},#{createUser},#{createTime},#{modifyUser},#{modifyTime});
+	</insert>
+	
+	<!-- 查询抓拍机动车的数量 -->
+	<select id="getMotorCountByUuid"  resultType="java.lang.Integer">
+		SELECT
+			count(1)
+		FROM
+			motor_vehicle
+		WHERE uuid = #{uuid};
+	</select>
+	
+	<!-- 查询抓拍的抓拍图地址 -->
+	<select id="findCapUrl"  resultType="java.lang.String">
+		SELECT
+			c.cap_url as capUrl
+		FROM
+			capture c
+		WHERE
+			c.uuid = #{capUuid};
+	</select>
+	
+	<!-- 查询抓拍的场景图地址 -->
+	<select id="findSceneUrl"  resultType="java.lang.String">
+		SELECT
+			acl.scene_url as sceneUrl
+		FROM
+			alarm_cmp_logs acl
+		WHERE
+			acl.cap_uuid = #{capUuid}
+		limit 1;
+	</select>
+	
+</mapper>

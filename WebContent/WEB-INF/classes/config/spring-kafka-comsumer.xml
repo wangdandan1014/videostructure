@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+     http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+     http://www.springframework.org/schema/tx
+     http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+     http://www.springframework.org/schema/context
+     http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+	<!--
+		blog: https://www.cnblogs.com/wangb0402/p/6187796.html
+		git: https://gitee.com/wsmd/kafka-0.10-demo/
+	-->
+
+	<!--<bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">-->
+		<!--<property name="locations">-->
+			<!--<list>-->
+				<!--<value>classpath*:properties/remoteutil.properties</value>-->
+			<!--</list>-->
+		<!--</property>-->
+	<!--</bean>-->
+
+	<!-- 抓拍消息的订阅 -->
+	<bean id="capConsumerFactory" class="org.springframework.kafka.core.DefaultKafkaConsumerFactory">
+		<constructor-arg>
+			<bean  class="java.util.HashMap">
+				<constructor-arg>
+					<map>
+						<entry key="bootstrap.servers" value="${kafka.capconsumer.servers}"/>
+						<entry key="group.id" value="${kafka.capconsumer.group.id}"/>
+						<entry key="enable.auto.commit" value="true"/>
+						<entry key="auto.commit.interval.ms" value="5000"/>
+						<entry key="session.timeout.ms" value="30000"/>
+						<entry key="max.poll.records" value="100"/>
+						<entry key="max.partition.fetch.bytes" value="10485760"/>
+						<entry key="value.serializer" value="org.apache.kafka.common.serialization.ByteArraySerializer"/>
+						<entry key="value.deserializer" value="org.apache.kafka.common.serialization.ByteArrayDeserializer"/>
+						<entry key="key.serializer" value="org.apache.kafka.common.serialization.StringSerializer"/>
+						<entry key="key.deserializer" value="org.apache.kafka.common.serialization.StringDeserializer"/>
+					</map>
+				</constructor-arg>
+			</bean>
+		</constructor-arg>
+	</bean>
+
+
+	<!-- 监听kafka消息消费的类 -->
+	<bean id="capDealMessageListerner" class="com.sensing.core.utils.kafka.CapConsumerListener">
+	</bean>
+
+	<!-- 消费者容器配置信息 -->
+	<bean id="capContainerProperties" class="org.springframework.kafka.listener.config.ContainerProperties">
+		<constructor-arg value="${kafka.capconsumer.topicNames}"/>
+		<property name="messageListener" ref="capDealMessageListerner"/>
+	</bean>
+	
+	<bean id="capMessageListenerContainer" class="org.springframework.kafka.listener.KafkaMessageListenerContainer" init-method="doStart">
+			<constructor-arg ref="capConsumerFactory"/>
+			<constructor-arg ref="capContainerProperties"/>
+	</bean>
+	
+	
+	
+	<!-- 告警消息的订阅 -->
+	<!-- 创建kafka consumerFactory bean -->
+	<!-- 
+	<bean id="alarmConsumerFactory" class="org.springframework.kafka.core.DefaultKafkaConsumerFactory">
+		<constructor-arg>
+			<bean  class="java.util.HashMap">
+				<constructor-arg>
+					<map>
+						<entry key="bootstrap.servers" value="${kafka.alarmconsumer.servers}"/>
+						<entry key="group.id" value="${kafka.alarmconsumer.group.id}"/>
+						<entry key="enable.auto.commit" value="true"/>
+						<entry key="auto.commit.interval.ms" value="5000"/>
+						<entry key="session.timeout.ms" value="30000"/>
+						<entry key="max.poll.records" value="1"/>
+						<entry key="max.partition.fetch.bytes" value="10485760"/>
+						<entry key="value.serializer" value="org.apache.kafka.common.serialization.ByteArraySerializer"/>
+						<entry key="value.deserializer" value="org.apache.kafka.common.serialization.ByteArrayDeserializer"/>
+						<entry key="key.serializer" value="org.apache.kafka.common.serialization.StringSerializer"/>
+						<entry key="key.deserializer" value="org.apache.kafka.common.serialization.StringDeserializer"/>
+					</map>
+				</constructor-arg>
+			</bean>
+		</constructor-arg>
+	</bean>
+	 -->
+
+
+	<!-- 监听kafka消息消费的类 -->
+	<!--  	
+	<bean id="capAlarmConsumer" class="com.sensing.core.alarm.CapAlarmConsumer">
+	</bean>
+	 -->
+
+	<!-- 消费者容器配置信息 -->
+	<!--  	
+	<bean id="alertContainerProperties" class="org.springframework.kafka.listener.config.ContainerProperties">
+		<constructor-arg value="${kafka.alarmconsumer.topicNames}"/>
+		<property name="messageListener" ref="capAlarmConsumer"/>
+	</bean>
+	 -->
+
+	<!--  	
+	<bean id="alarmMessageListenerContainer" class="org.springframework.kafka.listener.KafkaMessageListenerContainer" init-method="doStart">
+			<constructor-arg ref="alarmConsumerFactory"/>
+			<constructor-arg ref="alertContainerProperties"/>
+	</bean>
+	 -->
+
+</beans>

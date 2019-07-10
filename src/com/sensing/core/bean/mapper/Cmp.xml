@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ICmpDAO">
+
+	<resultMap id="resultMap" type="com.sensing.core.alarm.CmpResultBean">
+		<id column="uuid" property="templateObjUuid" />
+		<id column="templatedb_id" property="templateDbId" />
+		<id column="main_template_url" property="mainTemplateUrl" />
+		<id column="obj_plate_no" property="objPlateNo" />
+	</resultMap>
+	
+	<select id="cmpQuery" resultMap="resultMap">
+		SELECT
+			a.uuid,
+			a.plate_no as obj_plate_no,
+			a.templatedb_id,
+			a.main_template_url
+		FROM
+			template_obj_motor a
+		WHERE
+			1 = 1 
+			<if test=" params.plateNo != null and params.plateNo != '' ">
+				and  '${params.plateNo}' LIKE a.plate_no
+			</if>
+			<if test=" params.plateColor != null and params.plateColor != '' ">
+				and ( a.plate_color = #{params.plateColor} or a.plate_color is null )
+			</if>
+			<if test=" params.vehicleBrandTag != null and params.vehicleBrandTag != '' ">
+				and ( a.vehicle_brand_tag = #{params.vehicleBrandTag} or a.vehicle_brand_tag is null  )
+			</if>
+			<if test=" params.vehicleModelTag != null and params.vehicleModelTag != '' ">
+				and ( a.vehicle_model_tag = #{params.vehicleModelTag} or a.vehicle_model_tag is null  )
+			</if>
+			<if test=" params.vehicleStylesTag != null and params.vehicleStylesTag != '' ">
+				and ( a.vehicle_styles_tag = #{params.vehicleStylesTag} or a.vehicle_styles_tag is null ) 
+			</if>
+			<if test=" params.vehicleColor != null and params.vehicleColor != '' ">
+				and ( a.vehicle_color = #{params.vehicleColor} or a.vehicle_color is null )
+			</if>
+			<if test=" params.vehicleClass != null and params.vehicleClass != '' ">
+				and ( a.vehicle_class = #{params.vehicleClass} or a.vehicle_class is null )
+				</if>
+				and a.is_deleted = 0
+		ORDER BY a.create_time DESC
+	</select>
+	
+</mapper>

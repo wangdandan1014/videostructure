@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/task
+	    http://www.springframework.org/schema/task/spring-task.xsd">
+
+
+    <context:component-scan base-package="com.sensing.core.utils.task"/>
+    <task:annotation-driven executor="executorPool" scheduler="schedulerPool"/>
+    <task:scheduler id="schedulerPool" pool-size="15"/>
+    <task:executor id="executorPool" pool-size="8" queue-capacity="10" rejection-policy="CALLER_RUNS"/>
+
+    <!--实时结构化任务 -->
+    <!-- 
+    <task:scheduled-tasks scheduler="schedulerPool">
+        <task:scheduled ref="taskTimerTask" method="startTask" cron="${task.update.crontime}"/>
+    </task:scheduled-tasks>
+     -->
+
+    <!--历史结构化任务-->
+    <!-- 
+    <task:scheduled-tasks scheduler="schedulerPool">
+        <task:scheduled ref="historyTimerTask" method="startHistory" cron="${task.update.crontime}"/>
+    </task:scheduled-tasks>
+     -->
+
+    <!--布控任务-->
+    <!-- 
+    <task:scheduled-tasks scheduler="schedulerPool">
+        <task:scheduled ref="jobsTimerTask" method="startJobs" cron="${job.update.crontime}"/>
+    </task:scheduled-tasks>
+     -->
+
+    <!--通道预览缓存更新-->
+    <task:scheduled-tasks scheduler="schedulerPool">
+        <task:scheduled ref="devicePreviewTimer" method="startTask" cron="${devicepreview.update.crontime}"/>
+    </task:scheduled-tasks>
+	
+    <!--布控任务-->
+    <task:scheduled-tasks scheduler="schedulerPool">
+        <task:scheduled ref="jobsAndTaskTimer" method="startJobs" cron="${job.update.crontime}"/>
+    </task:scheduled-tasks>
+</beans>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IStaticTaskDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.StaticTask">
+		<id column="uuid" property="uuid" />
+		<id column="name" property="name" />
+		<id column="type" property="type" />
+		<id column="state" property="state" />
+		<id column="analy_type" property="analyType" />
+		<id column="auto_start" property="autoStart" />
+		<id column="is_deleted" property="isDeleted" />
+		<id column="create_user" property="createUser" />
+		<id column="create_time" property="createTime" />
+		<id column="modify_user" property="modifyUser" />
+		<id column="modify_time" property="modifyTime" />
+		<id column="channel_addr" property="channelAddr" />
+		<id column="channel_description" property="channelDescription" />
+		<id column="channel_rtmp" property="channelRtmp" />
+		<id column="channel_rtmp" property="channelRtmp" />
+		<id column="channel_uuid" property="channelId" />
+		<id column="memo" property="memo"/>
+		<id column="createUserStr" property="createUserStr"/>
+	</resultMap>
+	<sql id="column_list">
+		t.uuid,t.name,t.type,t.state,analy_type,t.is_deleted,t.create_user,t.create_time,t.modify_user,t.memo,t.modify_time,c.channel_addr,c.channel_description,c.channel_rtmp
+	</sql>
+	<select id="queryList" resultMap="resultMap">
+		SELECT
+		<include refid="column_list" />,u.username as createUserStr,c.uuid as channel_uuid
+		FROM task t
+			inner join task_channel tc on t.uuid=tc.task_uuid
+			inner join channel c on tc.channel_uuid=c.uuid
+			left join sys_user u on t.create_user=u.uuid
+		where 
+			 c.is_del=1 and c.reserved=9 and t.is_deleted=0
+			<if test="f.name != null and f.name != '' ">
+				and t.name like CONCAT('%',#{f.name},'%')
+			</if>
+			<if test="f.state != null and f.state != '' ">
+                and t.state = #{f.state}
+            </if>
+            order by t.create_time desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		SELECT
+		count(t.uuid)
+		FROM task t
+			inner join task_channel tc on t.uuid=tc.task_uuid
+			inner join channel c on tc.channel_uuid=c.uuid
+		<where>
+			 c.is_del=1 and c.reserved=9
+			<if test="f.name != null and f.name != '' ">
+				and name like CONCAT('%',#{f.name},'%')
+			</if>
+			<if test="f.state != null and f.state != '' ">
+				and state &gt;=#{f.state}
+			</if>
+		</where>
+	</select>
+	<select id="getVedioByJobId" resultMap="resultMap">
+		SELECT  
+		<include refid="column_list" />,c.uuid as channel_uuid,u.username as createUserStr
+		FROM task t
+			inner join task_channel tc on t.uuid=tc.task_uuid
+			inner join channel c on tc.channel_uuid=c.uuid
+			left join sys_user u on t.create_user=u.uuid
+		where c.is_del=1 and c.reserved=9 
+				and t.uuid=#{id}
+	</select>
+</mapper>

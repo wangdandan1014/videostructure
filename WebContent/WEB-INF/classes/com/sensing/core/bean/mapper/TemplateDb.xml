@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ITemplateDbDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.TemplateDb">
+		<id column="id" property="id" />
+		<id column="template_db_name" property="templateDbName" />
+		<id column="template_db_type" property="templateDbType" />
+		<id column="is_used" property="isUsed" />
+		<id column="template_db_description"
+			property="templateDbDescription" />
+		<id column="template_db_size" property="templateDbSize" />
+		<id column="is_deleted" property="isDeleted" />
+		<id column="create_time" property="createTime" />
+		<id column="create_user" property="createUser" />
+		<id column="modify_time" property="modifyTime" />
+		<id column="modify_user" property="modifyUser" />
+	</resultMap>
+	<sql id="column_list">
+		id,template_db_name,template_db_type,is_used,template_db_description,template_db_size,is_deleted,create_time,create_user,modify_time,modify_user
+	</sql>
+	<insert id="saveTemplateDb" useGeneratedKeys="true"
+		keyProperty="id" parameterType="com.sensing.core.bean.TemplateDb">
+		insert into
+		template_db(template_db_name,template_db_type,is_used,template_db_description,template_db_size,is_deleted,create_time,create_user,modify_time,modify_user)
+		values(
+		#{templateDbName},#{templateDbType},#{isUsed},#{templateDbDescription},#{templateDbSize},#{isDeleted},#{createTime},#{createUser},#{modifyTime},#{modifyUser}
+		)
+	</insert>
+	<select id="getTemplateDb" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template_db
+		where id = #{0} and is_deleted = #{1}
+	</select>
+	<select id="queryTemplateDbByName" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template_db
+		where is_deleted = 0 and template_db_name = #{0}
+	</select>
+	<select id="queryTemplateDb" parameterType="Map"
+		resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template_db
+		<where>
+			is_deleted = 0
+			<if test="isUsed != null and isUsed != '' ">
+				and is_used = #{isUsed}
+			</if>
+			<if test="id != null and id != '' ">
+				and id != #{id}
+			</if>
+			<if test="idList != null and idList != '' and idList.size() > 0 ">
+				AND id IN
+				<foreach collection="idList" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<!-- <if test="params.isUsed != null and params.isUsed != '' "> -->
+			<!-- and is_used != #{params.isUsed} -->
+			<!-- </if> -->
+			<!-- <if test="params.id != null and params.id != '' "> -->
+			<!-- and id != #{id} -->
+			<!-- </if> -->
+			<!-- <if test="params.idList != null and params.idList != '' and params.idList.size() 
+				> 0 "> -->
+			<!-- AND id IN -->
+			<!-- <foreach collection="params.idList" index="index" item="item" -->
+			<!-- open="(" separator="," close=")"> -->
+			<!-- #{item} -->
+			<!-- </foreach> -->
+			<!-- </if> -->
+
+		</where>
+	</select>
+	<select id="queryTemplateDbByType" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template_db
+		<where>
+			is_deleted = 0
+			<if test="itemId != null and itemId != '' ">
+				and template_db_type = #{itemId}
+			</if>
+		</where>
+	</select>
+	<delete id="removeTemplateDb">
+		delete from template_db
+		where id = #{id}
+	</delete>
+	<update id="updateTemplateDb">
+		update template_db set
+		template_db_name=#{templateDbName},template_db_type=#{templateDbType},is_used=#{isUsed},template_db_description=#{templateDbDescription},template_db_size=#{templateDbSize},is_deleted=#{isDeleted},create_time=#{createTime},create_user=#{createUser},modify_time=#{modifyTime},modify_user=#{modifyUser}
+		where id=#{id}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		SELECT DISTINCT
+		<include refid="column_list" />
+		FROM ( (SELECT * FROM template_db t WHERE t.id = 1 ) UNION ALL
+		( SELECT
+		* FROM template_db t ORDER BY t.create_time DESC ) ) db
+		<where>
+			<if test="f.id != null and f.id != '' ">
+				and db.id = #{f.id}
+			</if>
+			<if test="f.singleId != null and f.singleId != '' ">
+				and db.id != #{f.singleId}
+			</if>
+			<if test="f.isDeleted != null and f.isDeleted != '' ">
+				and db.is_deleted = #{f.isDeleted}
+			</if>
+			<if test="f.isUsed != null and f.isUsed != '' ">
+				and db.is_used = #{f.isUsed}
+			</if>
+			<if test="f.templateDbName != null and f.templateDbName != '' ">
+				and db.template_db_name like
+				CONCAT('%',#{f.templateDbName},'%')
+			</if>
+			<if test="f.templateDbType != null and f.templateDbType != '' ">
+				and db.template_db_type = #{f.templateDbType}
+			</if>
+			<if test="f.templateDbSize != null and f.templateDbSize != '' ">
+				and db.template_db_size = #{f.templateDbSize}
+			</if>
+			<if test="f.templateDbDescription != null and f.templateDbDescription != '' ">
+				and tdb.emplate_db_description like
+				CONCAT('%',#{f.templateDbDescription},'%')
+			</if>
+		</where>
+		ORDER BY
+		db.id = 1 DESC,
+		db.create_time DESC
+		<!-- LIMIT 0,10 -->
+		<!-- order by create_time desc -->
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(id)
+		from template_db
+		<where>
+			<if test="f.id != null and f.id != '' ">
+				and id = #{f.id}
+			</if>
+			<if test="f.singleId != null and f.singleId != '' ">
+				and id != #{f.singleId}
+			</if>
+			<if test="f.isDeleted != null and f.isDeleted != '' ">
+				and is_deleted = #{f.isDeleted}
+			</if>
+			<if test="f.isUsed != null and f.isUsed != '' ">
+				and is_used = #{f.isUsed}
+			</if>
+			<if test="f.templateDbName != null and f.templateDbName != '' ">
+				and template_db_name like
+				CONCAT('%',#{f.templateDbName},'%')
+			</if>
+			<if test="f.templateDbType != null and f.templateDbType != '' ">
+				and template_db_type = #{f.templateDbType}
+			</if>
+			<if test="f.templateDbSize != null and f.templateDbSize != '' ">
+				and template_db_size = #{f.templateDbSize}
+			</if>
+			<if
+				test="f.templateDbDescription != null and f.templateDbDescription != '' ">
+				and template_db_description like
+				CONCAT('%',#{f.templateDbDescription},'%')
+			</if>
+		</where>
+	</select>
+	
+	<!-- 根据模板库的id获取模板库的数量，判断库id集合的模板库是否都存在 -->
+	<select id="selectDbCount" resultType="int" parameterType="java.util.List">
+		SELECT
+			COUNT(1)
+		FROM
+			template_db tdb
+		WHERE
+			tdb.is_deleted = 0
+			and tdb.is_used = 1
+			and tdb.id IN 
+		<foreach collection="list" item="item" open="(" close=")" separator=",">
+			#{item}
+		</foreach>
+	</select>
+	
+	<!-- 更新车辆模板库的模板数量 -->
+	<update id="updateTemplateDbSize" parameterType="int">
+		UPDATE 
+			template_db tdb
+		SET tdb.template_db_size = (
+			SELECT
+				COUNT(1)
+			FROM
+				template_obj_motor tom
+			WHERE
+				tom.is_deleted = 0
+			AND tom.templatedb_id = #{tDbId}
+		)
+		WHERE
+			tdb.id = #{tDbId}	
+	</update>
+	
+</mapper>

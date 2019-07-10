@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IDataOverviewDAO">
+
+	<!-- 统计告警的数量 -->
+	<select id="alarmCount" resultType="java.util.HashMap">
+		SELECT
+			tab.job_level alarmLevel,
+			COUNT(tab.job_level) alarmCount
+		FROM
+			(
+				SELECT
+					a.uuid,
+					a.job_uuid,
+					a.job_level
+				FROM
+					alarm a
+				WHERE
+					a.alarm_time  &gt;= #{startTime}
+					AND a.alarm_time &lt;= #{endTime}
+					<if test="deviceIds != null  and deviceIds.size() > 0  ">
+						and a.device_id in 
+						<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	          		 		 #{deviceId}
+						</foreach>
+					</if>
+			) tab
+		GROUP BY tab.job_level
+	</select>
+	<!-- 统计告警的数量 -->
+	<select id="alarmCountByDay" resultType="java.util.HashMap">
+		SELECT
+			count(1) as alarmCount
+		FROM
+			alarm a
+		WHERE
+			a.alarm_time  &gt;= #{startTime}
+			AND a.alarm_time &lt;= #{endTime}
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and a.device_id in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	          		  #{deviceId}
+				</foreach>
+			</if>
+	</select>
+	<select id="alarmTypeStatistics" resultType="java.util.HashMap">
+		SELECT
+			SUM( sum ) AS count,
+			itemId,
+			SUM( sum ) / (
+				SELECT
+					count( 1 ) AS count1 
+				FROM
+					`alarm` a
+				<where>
+					<if test="startTime != null  and startTime != ''">
+						AND a.alarm_time  &gt;= #{startTime} 
+					</if>
+					<if test="endTime != null  and endTime != ''">
+						AND a.alarm_time &lt;= #{endTime} 
+					</if>
+					<if test="deviceIds != null  and deviceIds.size() > 0  ">
+						AND a.device_id in 
+						<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	          		 		 #{deviceId}
+						</foreach>
+					</if>
+				</where>
+			) AS pct
+		FROM
+		(
+			SELECT
+				count( 1 ) AS sum,
+				db.template_db_type AS itemId,
+				a.cmp_templatedb_id 
+			FROM
+				`alarm` a
+			LEFT JOIN template_db db ON a.cmp_templatedb_id = db.id
+			LEFT JOIN sys_typecode tc ON tc.item_id = db.template_db_type 
+			WHERE
+				tc.memo = '库类型' 
+				<if test="startTime != null  and startTime != ''">
+						AND a.alarm_time  &gt;= #{startTime} 
+				</if>
+				<if test="endTime != null  and endTime != ''">
+						AND a.alarm_time &lt;= #{endTime} 
+				</if>
+				<if test="deviceIds != null  and deviceIds.size() > 0  ">
+						AND a.device_id in 
+						<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	          		 		 #{deviceId}
+						</foreach>
+				</if>
+			GROUP BY
+				a.cmp_templatedb_id order by null
+		) AS type 
+			GROUP BY
+				type.itemId
+	</select>
+	<select id="regionAlarmStatistics" resultType="java.util.HashMap">
+		SELECT
+			SUM( total ) as count,
+			region_id as regionId ,
+			region_name AS  regionName
+		FROM
+			(
+			SELECT
+			count( 1 ) AS total,
+			a.device_id AS device_id,
+			ch.region_id AS region_id,
+			re.region_name AS region_name 
+		FROM
+			alarm a
+			LEFT JOIN channel ch ON a.device_id = ch.uuid
+			LEFT JOIN regions re ON re.id = ch.region_id 
+			<where>
+				<if test="startTime != null  and startTime != ''">
+						AND a.alarm_time  &gt;= #{startTime} 
+				</if>
+				<if test="endTime != null  and endTime != ''">
+						AND a.alarm_time &lt;= #{endTime} 
+				</if>
+				<if test="deviceIds != null  and deviceIds.size() > 0  ">
+						AND a.device_id in 
+						<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	          		 		 #{deviceId}
+						</foreach>
+				</if>
+			</where>
+		GROUP BY
+			device_id order by null 
+			) s 
+		GROUP BY
+			region_id
+	</select>
+	<select id="alarmStatistics" resultType="java.lang.Integer">
+		SELECT
+			count( 1 ) 
+		FROM
+			alarm a
+		<where>
+			<if test="startTime != null  and startTime != ''">
+					AND a.alarm_time  &gt;= #{startTime} 
+			</if>
+			<if test="endTime != null  and endTime != ''">
+					AND a.alarm_time &lt;= #{endTime} 
+			</if>
+		</where>
+	</select>
+	<select id="alarmStatisticsConfirmed" resultType="java.lang.Integer">
+		SELECT
+			count( 1 ) 
+		FROM
+			alarm a
+		<where>
+			<if test="startTime != null  and startTime != ''">
+					AND a.state_time  &gt;= FROM_UNIXTIME(#{startTime}) 
+			</if>
+			<if test="endTime != null  and endTime != ''">
+					AND a.state_time &lt;= FROM_UNIXTIME(#{endTime}) 
+			</if>
+			<if test="state != null  and state != ''">
+					AND a.state = #{state} 
+			</if>
+		</where>
+	</select>
+	
+</mapper>

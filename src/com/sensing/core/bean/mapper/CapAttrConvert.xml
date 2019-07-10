@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ICapAttrConvertDAO">
+
+	<select id="personConvert" resultType="java.util.HashMap">
+		SELECT 1
+			<if test=" age != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_AGE' AND item_id = #{age}) ageTag
+			</if>
+			<if test=" genderCode != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_SEX' AND item_id = #{genderCode}) genderCodeTag
+			</if>
+			<if test=" bagStyle != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CARRY_BAG' AND item_id = #{bagStyle}) bagStyleTag
+			</if>
+			<if test=" bigBagStyle != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CARRY_PORTABLE' AND item_id = #{bigBagStyle}) bigBagStyleTag
+			</if>
+			<if test=" orientation != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_ORIENTATION' AND item_id = #{orientation}) orientationTag
+			</if>
+			<if test=" motion != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_RUNSTATE' AND item_id = #{motion}) motionTag
+			</if>
+			<if test=" cap != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_HAT' AND item_id = #{cap}) capTag
+			</if>
+			<if test=" respirator != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_ACCESSORIES' AND item_id = #{respirator}) respiratorTag
+			</if>
+			<if test=" glass != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_ACCESSORIES' AND item_id = #{glass}) glassTag
+			</if>
+			<if test=" coatColor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_COLOR' AND item_id = #{coatColor}) coatColorTag
+			</if>
+			<if test=" coatLength != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_UPPER_TYPE' AND item_id = #{coatLength}) coatLengthTag
+			</if>
+			<if test=" coatTexture != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_TEXTURE' AND item_id = #{coatTexture}) coatTextureTag
+			</if>
+			<if test=" trousersColor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_COLOR' AND item_id = #{trousersColor}) trousersColorTag
+			</if>
+			<if test=" trousersLen != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_LOWER_TYPE' AND item_id = #{trousersLen}) trousersLenTag
+			</if>
+			<if test=" trousersTexture != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_TEXTURE' AND item_id = #{trousersTexture}) trousersTextureTag
+			</if>
+			FROM DUAL 
+	</select>
+	
+	<select id="nonmotorVehicleConvert" resultType="java.util.HashMap">
+		SELECT 1
+			<if test=" orientation != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_ORIENTATION' AND item_id = #{orientation}) orientationTag
+			</if>
+			<if test=" vehicleColor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_COLOR' AND item_id = #{vehicleColor}) vehicleColorTag
+			</if>
+			<if test=" vehicleClass != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_NONMOTOR_CAR_TYPE' AND item_id = #{vehicleClass}) vehicleClassTag
+			</if>
+			<if test=" motion != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_RUNSTATE' AND item_id = #{motion}) motionTag
+			</if>
+			<if test=" genderCode != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_SEX' AND item_id = #{genderCode}) genderCodeTag
+			</if>
+			<if test=" age != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_AGE' AND item_id = #{age}) ageTag
+			</if>
+			<if test=" cap != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_HAT' AND item_id = #{cap}) capTag
+			</if>
+			<if test=" glass != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_ACCESSORIES' AND item_id = #{glass}) glassTag
+			</if>
+			<if test=" respirator != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_ACCESSORIES' AND item_id = #{respirator}) respiratorTag
+			</if>
+			<if test=" coatColor != null  ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_COLOR' AND item_id = #{coatColor}) coatColorTag
+			</if>
+			<if test=" coatLength != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_UPPER_TYPE' AND item_id = #{coatLength}) coatLengthTag
+			</if>
+			<if test=" coatTexture != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_PEOPLE_CLOTHES_TEXTURE' AND item_id = #{coatTexture}) coatTextureTag
+			</if>
+			FROM DUAL 
+	</select>
+	
+	
+	<select id="motorVehicleConvert" resultType="java.util.HashMap">
+		SELECT 1
+			<if test=" vehicleColor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_COLOR' AND item_id = #{vehicleColor}) vehicleColorTag
+			</if>
+			<if test=" orientation != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_ORIENTATION' AND item_id = #{orientation}) orientationTag
+			</if>
+			<if test=" plateColor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_BRAND_COLOR' AND item_id = #{plateColor}) plateColorTag
+			</if>
+			<if test=" vehicleClass != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_MOTOR_CAR_TYPE' AND item_id = #{vehicleClass}) vehicleClassTag
+			</if>
+			<if test=" plateClass != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_BRAND_TYPE' AND item_id = #{plateClass}) plateClassTag
+			</if>
+			<if test=" plateClass == null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_BRAND_TYPE' AND item_id = 0) plateClassTag
+			</if>
+			<!--
+			
+			<if test=" vehicleBrand != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'BRANDMAIN' AND item_id = #{vehicleBrand}) vehicleBrandTag
+			</if>
+			<if test=" vehicleModel != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'BRANDSUB' AND item_id = #{vehicleModel}) vehicleModelTag
+			</if>
+			<if test=" vehicleStyles != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'BRANDYEAR' AND item_id = #{vehicleStyles}) vehicleStylesTag
+			</if>
+			
+			-->
+			<if test=" vehicleMarkerMot != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_MARKER_MOT' AND item_id = #{vehicleMarkerMot}) vehicleMarkerMotTag
+			</if>
+			<if test=" vehicleMarkerTissuebox != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAR_VEHICLE_MARKER_TISSUEBOX' AND item_id = #{vehicleMarkerTissuebox}) vehicleMarkerTissueboxTag
+			</if>
+			<if test=" vehicleMarkerPendant != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAR_VEHICLE_MARKER_PENDANT' AND item_id = #{vehicleMarkerPendant}) vehicleMarkerPendantTag
+			</if>
+			<if test=" sunvisor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAR_VEHICLE_MARKER_SUNVISOR' AND item_id = #{sunvisor}) sunvisorTag
+			</if>
+			<if test=" safetyBelt != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAR_VEHICLE_BELT' AND item_id = #{safetyBelt}) safetyBeltTag
+			</if>
+			<if test=" safetyBeltCopilot != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAR_VEHICLE_BELT' AND item_id = #{safetyBeltCopilot}) safetyBeltCopilotTag
+			</if>
+			<if test=" calling != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAR_VEHICLE_DRIVER_PHONE' AND item_id = #{calling}) callingTag
+			</if>
+			<if test=" calling == null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAR_VEHICLE_DRIVER_PHONE' AND item_id = 0) callingTag
+			</if>
+			FROM DUAL 
+	</select>
+	<select id="templateObjMotorConvert" resultType="java.util.HashMap">
+		SELECT 1
+			<if test=" vehicleColor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_COLOR' AND item_id = #{vehicleColor}) vehicleColorTag
+			</if>
+			<if test=" vehicleColor == null ">
+				,"不限" as vehicleColorTag
+			</if>
+			<if test=" plateColor != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_BRAND_COLOR' AND item_id = #{plateColor}) plateColorTag
+			</if>
+			<if test=" plateColor == null ">
+				,"不限" as plateColorTag
+			</if>
+			<if test=" vehicleClass != null ">
+				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_MOTOR_CAR_TYPE' AND item_id = #{vehicleClass}) vehicleClassTag
+			</if>
+			<if test=" vehicleClass == null ">
+				,"不限" as vehicleClassTag
+			</if>
+			<if test=" vehicleBrandTag == null ">
+				,"不限" as vehicleBrandTag
+			</if>
+<!-- 			<if test=" plateClass != null "> -->
+<!-- 				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_BRAND_TYPE' AND item_id = #{plateClass}) plateClassTag -->
+<!-- 			</if> -->
+			FROM DUAL 
+	</select>
+	<select id="templateObjMotorReverse" resultType="java.util.HashMap">
+		SELECT 1
+			<if test=" vehicleColorTag != null ">
+				,(SELECT item_id from 	sys_typecode where type_code = 'CAP_VEHICLE_COLOR' AND item_value = #{vehicleColorTag}) vehicleColor
+			</if>
+			<if test=" plateColorTag != null ">
+				,(SELECT item_id from 	sys_typecode where type_code = 'CAP_VEHICLE_BRAND_COLOR' AND item_value = #{plateColorTag}) plateColor
+			</if>
+			<if test=" vehicleClassTag != null ">
+				,(SELECT item_id from 	sys_typecode where type_code = 'CAP_MOTOR_CAR_TYPE' AND item_value = #{vehicleClassTag}) vehicleClass
+			</if>
+<!-- 			<if test=" plateClass != null "> -->
+<!-- 				,(SELECT item_value from 	sys_typecode where type_code = 'CAP_VEHICLE_BRAND_TYPE' AND item_id = #{plateClass}) plateClassTag -->
+<!-- 			</if> -->
+			FROM DUAL 
+	</select>
+
+</mapper>

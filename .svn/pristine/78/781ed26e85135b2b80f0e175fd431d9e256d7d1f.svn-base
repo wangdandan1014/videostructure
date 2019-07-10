@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ITemplateObjMotorDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.TemplateObjMotor">
+		<id column="uuid" property="uuid" />
+		<id column="is_deleted" property="isDeleted" />
+		<id column="templatedb_id" property="templatedbId" />
+		<id column="main_template_uuid" property="mainTemplateUuid" />
+		<id column="main_template_url" property="mainTemplateUrl" />
+		<id column="plate_no" property="plateNo" />
+		<id column="plate_color" property="plateColor" />
+		<id column="vehicle_brand_tag" property="vehicleBrandTag" />
+		<id column="vehicle_model_tag" property="vehicleModelTag" />
+		<id column="vehicle_styles_tag" property="vehicleStylesTag" />
+		<id column="vehicle_color" property="vehicleColor" />
+		<id column="vehicle_class" property="vehicleClass" />
+		<id column="owner_name" property="ownerName" />
+		<id column="owner_tel" property="ownerTel" />
+		<id column="owner_idno" property="ownerIdno" />
+		<id column="owner_addr" property="ownerAddr" />
+		<id column="owner_contactInfo" property="ownerContactinfo" />
+		<id column="memo" property="memo" />
+		<id column="create_time" property="createTime" />
+		<id column="create_user" property="createUser" />
+		<id column="modify_time" property="modifyTime" />
+		<id column="modify_user" property="modifyUser" />
+	</resultMap>
+	<sql id="column_list">
+		tom.uuid,tom.is_deleted,tom.templatedb_id,tom.main_template_uuid,tom.main_template_url,tom.plate_no,tom.plate_color,tom.vehicle_brand_tag,tom.vehicle_model_tag,tom.vehicle_styles_tag,tom.vehicle_color,tom.vehicle_class,tom.owner_name,tom.owner_tel,tom.owner_idno,tom.owner_addr,tom.owner_contactInfo,tom.memo,tom.create_time,tom.create_user,tom.modify_time,tom.modify_user
+	</sql>
+	<insert id="saveTemplateObjMotor">
+		insert into
+		template_obj_motor(uuid,is_deleted,templatedb_id,main_template_uuid,main_template_url,plate_no,plate_color,vehicle_brand_tag,vehicle_model_tag,vehicle_styles_tag,vehicle_color,vehicle_class,owner_name,owner_tel,owner_idno,owner_addr,owner_contactInfo,memo,create_time,create_user,modify_time,modify_user)
+		values(
+		#{uuid},#{isDeleted},#{templatedbId},#{mainTemplateUuid},#{mainTemplateUrl},#{plateNo},#{plateColor},#{vehicleBrandTag},#{vehicleModelTag},#{vehicleStylesTag},#{vehicleColor},#{vehicleClass},#{ownerName},#{ownerTel},#{ownerIdno},#{ownerAddr},#{ownerContactinfo},#{memo},#{createTime},#{createUser},#{modifyTime},#{modifyUser}
+		)
+	</insert>
+	<select id="getTemplateObjMotor" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template_obj_motor tom
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeTemplateObjMotor">
+		delete from template_obj_motor
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateTemplateObjMotor">
+		update template_obj_motor set
+		is_deleted=#{isDeleted},templatedb_id=#{templatedbId},main_template_uuid=#{mainTemplateUuid},main_template_url=#{mainTemplateUrl},plate_no=#{plateNo},plate_color=#{plateColor},vehicle_brand_tag=#{vehicleBrandTag},vehicle_model_tag=#{vehicleModelTag},vehicle_styles_tag=#{vehicleStylesTag},vehicle_color=#{vehicleColor},vehicle_class=#{vehicleClass},owner_name=#{ownerName},owner_tel=#{ownerTel},owner_idno=#{ownerIdno},owner_addr=#{ownerAddr},
+		owner_contactInfo=#{ownerContactinfo},memo=#{memo},create_time=#{createTime},create_user=#{createUser},modify_time=#{modifyTime},modify_user=#{modifyUser}
+		where uuid=#{uuid}
+	</update>
+	<update id="logicalDeleted">
+		update template_obj_motor set
+		is_deleted= 1
+		<!-- where templatedb_id=#{0} -->
+		<where>
+			<if test="templatedbId != null and templatedbId != '' ">
+				and templatedb_id = #{templatedbId}
+			</if>
+		</where>
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		,t.image_url from template_obj_motor tom left join template t on
+		t.uuid = tom.main_template_uuid
+		<where>
+			<if test="f.uuid != null and f.uuid != '' ">
+				and tom.uuid = #{f.uuid}
+			</if>
+			<if test="f.isDeleted != null and f.isDeleted != '' ">
+				and tom.is_deleted = #{f.isDeleted}
+			</if>
+			<if test="f.templatedbId != null and f.templatedbId != '' ">
+				and tom.templatedb_id = #{f.templatedbId}
+			</if>
+			<if
+				test="f.mainTemplateUuid != null and f.mainTemplateUuid != '' ">
+				and tom.main_template_uuid = #{f.mainTemplateUuid}
+			</if>
+			<if test="f.plateNo != null and f.plateNo != '' ">
+				<!-- and LOCATE( #{f.plateNo}, tom.plate_no ) -->
+				and tom.plate_no like CONCAT('%',#{f.plateNo},'%')
+				<!-- and tom.plate_no like -->
+				<!-- CONCAT('%',REPLACE(REPLACE(#{f.plateNo},'*','%'),'?','_'),'%') -->
+			</if>
+			<if test="f.vehicleBrandTag != null and f.vehicleBrandTag != '' ">
+				and tom.vehicle_brand_tag like
+				CONCAT('%',#{f.vehicleBrandTag},'%')
+			</if>
+			<if test="f.vehicleModelTag != null and f.vehicleModelTag != '' ">
+				and tom.vehicle_model_tag like
+				CONCAT('%',#{f.vehicleModelTag},'%')
+			</if>
+			<if
+				test="f.vehicleStylesTag != null and f.vehicleStylesTag != '' ">
+				and tom.vehicle_styles_tag like
+				CONCAT('%',#{f.vehicleStylesTag},'%')
+			</if>
+			<if test="f.ownerName != null and f.ownerName != '' ">
+				and tom.owner_name like CONCAT('%',#{f.ownerName},'%')
+			</if>
+			<if test="f.ownerTel != null and f.ownerTel != '' ">
+				and tom.owner_tel = #{f.ownerTel}
+			</if>
+			<if test="f.ownerIdno != null and f.ownerIdno != '' ">
+				and tom.owner_idno = #{f.ownerIdno}
+			</if>
+			<if test="f.ownerAddr != null and f.ownerAddr != '' ">
+				and tom.owner_addr like CONCAT('%',#{f.ownerAddr},'%')
+			</if>
+		</where>
+		order by tom.create_time desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="queryTemplateObjMotor" resultMap="resultMap"
+		parameterType="java.util.Map">
+		select
+		<include refid="column_list" />
+		from template_obj_motor tom
+		<where>
+			<if
+				test="params.templatedbId != null and params.templatedbId != '' ">
+				and tom.templatedb_id = #{params.templatedbId}
+			</if>
+			<if test="params.plateNo != null and params.plateNo != '' ">
+				and tom.plate_no = #{params.plateNo}
+			</if>
+			<if test="params.isDeleted != null and params.isDeleted != '' ">
+				and tom.is_deleted = #{params.isDeleted}
+			</if>
+		</where>
+		order by tom.create_time desc
+	</select>
+	<select id="queryByTemplateDbId" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template_obj_motor tom
+		<where>
+			<if test="f.templatedbId != null and f.templatedbId != '' ">
+				and tom.templatedb_id = #{f.templatedbId}
+			</if>
+		</where>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from template_obj_motor tom
+		<where>
+			<if test="f.uuid != null and f.uuid != '' ">
+				and tom.uuid = #{f.uuid}
+			</if>
+			<if test="f.isDeleted != null and f.isDeleted != '' ">
+				and tom.is_deleted = #{f.isDeleted}
+			</if>
+			<if test="f.templatedbId != null and f.templatedbId != '' ">
+				and tom.templatedb_id = #{f.templatedbId}
+			</if>
+			<if
+				test="f.mainTemplateUuid != null and f.mainTemplateUuid != '' ">
+				and tom.main_template_uuid = #{f.mainTemplateUuid}
+			</if>
+			<if test="f.plateNo != null and f.plateNo != '' ">
+				<!-- and LOCATE( #{f.plateNo}, tom.plate_no ) -->
+				and tom.plate_no like CONCAT('%',#{f.plateNo},'%')
+				<!-- and tom.plate_no like -->
+				<!-- CONCAT('%',REPLACE(REPLACE(#{f.plateNo},'*','%'),'?','_'),'%') -->
+			</if>
+			<if test="f.vehicleBrandTag != null and f.vehicleBrandTag != '' ">
+				and tom.vehicle_brand_tag like
+				CONCAT('%',#{f.vehicleBrandTag},'%')
+			</if>
+			<if test="f.vehicleModelTag != null and f.vehicleModelTag != '' ">
+				and tom.vehicle_model_tag like
+				CONCAT('%',#{f.vehicleModelTag},'%')
+			</if>
+			<if
+				test="f.vehicleStylesTag != null and f.vehicleStylesTag != '' ">
+				and tom.vehicle_styles_tag like
+				CONCAT('%',#{f.vehicleStylesTag},'%')
+			</if>
+			<if test="f.ownerName != null and f.ownerName != '' ">
+				and tom.owner_name like CONCAT('%',#{f.ownerName},'%')
+			</if>
+			<if test="f.ownerTel != null and f.ownerTel != '' ">
+				and tom.owner_tel = #{f.ownerTel}
+			</if>
+			<if test="f.ownerIdno != null and f.ownerIdno != '' ">
+				and tom.owner_idno = #{f.ownerIdno}
+			</if>
+			<if test="f.ownerAddr != null and f.ownerAddr != '' ">
+				and tom.owner_addr like CONCAT('%',#{f.ownerAddr},'%')
+			</if>
+		</where>
+	</select>
+</mapper>

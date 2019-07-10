@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysOrgObjectDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.SysOrgObject">
+		<id column="uuid" property="uuid" />
+		<id column="org_id" property="orgId" />
+		<id column="object_type" property="objectType" />
+		<id column="object_id" property="objectId" />
+		<id column="level" property="level" />
+		<id column="create_user" property="createUser" />
+		<id column="create_time" property="createTime" />
+		<id column="modify_user" property="modifyUser" />
+		<id column="modify_time" property="modifyTime" />
+		<id column="oper_org_id" property="operOrgId" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,org_id,object_type,object_id,level,create_user,create_time,modify_user,modify_time,oper_org_id
+	</sql>
+	<insert id="saveSysOrgObject">
+	   insert into sys_org_object(uuid,org_id,object_type,object_id,level,create_user,create_time,modify_user,modify_time,oper_org_id)
+	   values(
+		   #{uuid},#{orgId},#{objectType},#{objectId},#{level},#{createUser},#{createTime},#{modifyUser},#{modifyTime},#{operOrgId}
+	   )
+	</insert>
+	<select id="getSysOrgObject" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_org_object
+		where uuid = #{uuid}
+	</select>
+	
+	<delete id="removeSysOrgObject">
+		delete from sys_org_object
+		where uuid = #{uuid}
+	</delete>
+	<delete id="deleteList">
+	delete from sys_org_object
+	where uuid in 
+	<foreach collection ="list" item="sysOrgObject" separator="," open="(" close=")">
+        	 #{sysOrgObject.uuid}
+    		</foreach >
+	</delete>
+	<update id="updateSysOrgObject">
+	   update sys_org_object set org_id=#{orgId},object_type=#{objectType},object_id=#{objectId},level=#{level},create_user=#{createUser},create_time=#{createTime},modify_user=#{modifyUser},modify_time=#{modifyTime},oper_org_id=#{operOrgId}
+	   where uuid=#{uuid}
+	</update>
+	<select id="query" resultMap="resultMap">
+	select
+		<include refid="column_list" />
+		from sys_org_object
+		<where>
+		<if test="uuid != null and uuid != '' ">
+		uuid=#{uuid}
+		</if>
+		<if test="orgId != null and orgId != '' ">
+		and org_id=#{orgId}
+		</if>
+		<if test="objectType != null and objectType != '' ">
+		and object_type=#{objectType}
+		</if>
+		<if test="objectId != null and objectId != '' ">
+		and object_id=#{objectId}
+		</if>
+		<if test="level != null and level != '' ">
+		and level=#{level}
+		</if>
+		<if test="operOrgId != null and operOrgId != '' ">
+		and oper_org_id=#{operOrgId}
+		</if>
+		</where>
+	</select>
+	<select id="queryListSysOrgObject" resultMap="resultMap">
+	select
+		<include refid="column_list" />
+		from sys_org_object 
+		<where>
+		object_type=#{objectType} and object_id=#{objectId} and org_id in 
+			 <foreach collection ="list" item="orgId" separator="," open="(" close=")">
+        	 #{orgId}
+    		</foreach >
+		</where>
+	</select>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_org_object
+		<where>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and org_id like CONCAT('%',#{f.orgId},'%')
+			</if>
+			<if test="f.objectType != null and f.objectType != '' ">
+				and object_type like CONCAT('%',#{f.objectType},'%')
+			</if>
+			<if test="f.objectId != null and f.objectId != '' ">
+				and object_id like CONCAT('%',#{f.objectId},'%')
+			</if>
+			<if test="f.levelFrom != null and f.levelFrom != '' ">
+				and level &gt;=#{f.levelFrom}
+			</if>
+			<if test="f.levelEnd != null and f.levelEnd != '' ">
+				and level &lt;= #{f.levelEnd}
+			</if>
+			<if test="f.createUser != null and f.createUser != '' ">
+				and create_user like CONCAT('%',#{f.createUser},'%')
+			</if>
+			<if test="f.createTimeFrom != null and f.createTimeFrom != '' ">
+				and create_time &gt;=#{f.createTimeFrom}
+			</if>
+			<if test="f.createTimeEnd != null and f.createTimeEnd != '' ">
+				and create_time &lt;= #{f.createTimeEnd}
+			</if>
+			<if test="f.modifyUser != null and f.modifyUser != '' ">
+				and modify_user like CONCAT('%',#{f.modifyUser},'%')
+			</if>
+			<if test="f.modifyTimeFrom != null and f.modifyTimeFrom != '' ">
+				and modify_time &gt;=#{f.modifyTimeFrom}
+			</if>
+			<if test="f.modifyTimeEnd != null and f.modifyTimeEnd != '' ">
+				and modify_time &lt;= #{f.modifyTimeEnd}
+			</if>
+			<if test="f.operOrgId != null and f.operOrgId != '' ">
+				and oper_org_id like CONCAT('%',#{f.operOrgId},'%')
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from sys_org_object
+		<where>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and org_id like CONCAT('%',#{f.orgId},'%')
+			</if>
+			<if test="f.objectType != null and f.objectType != '' ">
+				and object_type like CONCAT('%',#{f.objectType},'%')
+			</if>
+			<if test="f.objectId != null and f.objectId != '' ">
+				and object_id like CONCAT('%',#{f.objectId},'%')
+			</if>
+			<if test="f.levelFrom != null and f.levelFrom != '' ">
+				and level &gt;=#{f.levelFrom}
+			</if>
+			<if test="f.levelEnd != null and f.levelEnd != '' ">
+				and level &lt;= #{f.levelEnd}
+			</if>
+			<if test="f.createUser != null and f.createUser != '' ">
+				and create_user like CONCAT('%',#{f.createUser},'%')
+			</if>
+			<if test="f.createTimeFrom != null and f.createTimeFrom != '' ">
+				and create_time &gt;=#{f.createTimeFrom}
+			</if>
+			<if test="f.createTimeEnd != null and f.createTimeEnd != '' ">
+				and create_time &lt;= #{f.createTimeEnd}
+			</if>
+			<if test="f.modifyUser != null and f.modifyUser != '' ">
+				and modify_user like CONCAT('%',#{f.modifyUser},'%')
+			</if>
+			<if test="f.modifyTimeFrom != null and f.modifyTimeFrom != '' ">
+				and modify_time &gt;=#{f.modifyTimeFrom}
+			</if>
+			<if test="f.modifyTimeEnd != null and f.modifyTimeEnd != '' ">
+				and modify_time &lt;= #{f.modifyTimeEnd}
+			</if>
+			<if test="f.operOrgId != null and f.operOrgId != '' ">
+				and oper_org_id like CONCAT('%',#{f.operOrgId},'%')
+			</if>
+		</where>
+	</select>
+	<select id="qryOwnOrgObject" resultType="java.util.HashMap">
+	SELECT so.org_name ownOrgName ,IFNULL(soo.level,0) ownLevel FROM sys_org so LEFT JOIN `sys_org_object` soo ON soo.org_id = so.uuid 
+ 	AND soo.object_type = #{objectType} AND soo.object_id = #{objectId} WHERE so.uuid = #{orgId}
+	</select>
+	<select id="qryChildOrgObject" resultType="java.util.HashMap">
+	SELECT a.uuid orgId,a.org_name orgName ,IFNULL(soo.level,0) level
+	FROM sys_org_object soo RIGHT JOIN (SELECT UUID,org_name FROM sys_org WHERE
+	parent_id = #{orgId} )a ON soo.org_id = a.uuid
+	AND soo.object_type = #{objectType} AND soo.object_id = #{objectId} order by a.uuid
+	</select>
+	<select id="getObjectAuthLevel" resultType="int">
+		select ifnull(max(lv),0) from (
+		select id,'DB' as tp,3 as lv from face_template_db where is_deleted = 0 and org_id = #{f.orgId} and id = #{f.objectId}
+		union
+		select uuid,'CN' as tp,3 as lv  from channel where is_del = 0 and org_id = #{f.orgId} and uuid = #{f.objectId}
+		union 
+		select uuid,'JB' as tp,3 as lv  from jobs where is_deleted = 0 and org_id = #{f.orgId} and uuid = #{f.objectId}
+		union
+		select uuid,'JM' as tp,3 as lv  from job_method where is_deleted = 0 and org_id = #{f.orgId} and uuid = #{f.objectId}
+		union
+		select object_id,object_type as tp,level as lv  from sys_org_object where org_id = #{f.orgId} and object_type = #{f.objectType} and object_id=#{f.objectId}
+		union
+		SELECT cn.uuid,'CN' AS tp,oo. LEVEL AS lv FROM channel cn,regions rg,sys_org_object oo WHERE cn.region_id = rg.id AND rg.id = oo.object_id AND oo.object_type = 'RG' AND oo.org_id = #{f.orgId} AND oo.oper_org_id = cn.org_id AND cn.uuid = #{f.objectId}
+		) v where v.tp = #{f.objectType}
+	</select>
+	<select id="getAuthFromChildAuto" resultType="int">
+		select ifnull(max(lv),0) from (
+		select id,'DB' as tp,4 as lv from face_template_db where is_deleted = 0 
+		and id = #{f.objectId} and
+		( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and is_private=0 and org_id != #{f.orgId}
+			</if>
+			)
+		union
+		select uuid,'CN' as tp,4 as lv  from channel where is_del = 0 and uuid = #{f.objectId}  and
+		( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and is_private=0 and org_id != #{f.orgId}
+			</if>
+			)
+		union 
+		select uuid,'JB' as tp,4 as lv  from jobs where is_deleted = 0 and uuid = #{f.objectId}  and
+		( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and is_private=0 and org_id != #{f.orgId}
+			</if>
+			)
+		union
+		select uuid,'JM' as tp,4 as lv  from job_method where is_deleted = 0 and uuid = #{f.objectId} and
+		( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and is_private=0 and org_id != #{f.orgId}
+			</if>
+			)
+		) v where v.tp = #{f.objectType}
+	</select>
+	<select id="qryJobIdbyCNorDB" resultType="String">
+	SELECT j.job_id jobId,j.uuid FROM sys_org_object soo 
+	JOIN sys_user su ON soo.org_id = su.org_id 
+	<if test=" objectType = 'DB' ">
+	JOIN job_template_db j 
+	</if>
+	<if test=" objectType = 'CN' ">
+	JOIN job_channel j 
+	</if>
+	ON su.uuid =  j.uid and j.uuid = soo.object_id
+	<where>
+	soo.object_id = #{objectId}  AND soo.org_id = #{orgId}
+	</where>	
+	</select>
+</mapper>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysOrgDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.SysOrg">
+		<id column="uuid" property="uuid" />
+		<id column="org_name" property="orgName" />
+		<id column="parent_id" property="parentId" />
+		<id column="org_level" property="orgLevel" />
+		<id column="orde" property="orde" />
+		<id column="cap_addr" property="capAddr" />
+		
+	</resultMap>
+	<sql id="column_list">
+		uuid,org_name,parent_id,org_level,orde,cap_addr
+	</sql>
+	<insert id="saveSysOrg">
+	   insert into sys_org(uuid,org_name,parent_id,org_level,orde,cap_addr)
+	   values(
+		   #{uuid},#{orgName},#{parentId},#{orgLevel},#{orde},#{capAddr}
+	   )
+	</insert>
+	<select id="getSysOrg" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_org
+		where uuid = #{uuid}
+	</select>
+	<select id="getSysOrgByName" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_org
+		where org_name = #{orgName}
+	</select>
+	<delete id="removeSysOrg">
+		delete from sys_org
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateSysOrg">
+	   update sys_org set org_name=#{orgName},parent_id=#{parentId},org_level=#{orgLevel},orde=#{orde},cap_addr=#{capAddr}
+	   where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_org
+		<where>
+			<if test="f.orgName != null and f.orgName != '' ">
+				and org_name like CONCAT('%',#{f.orgName},'%')
+			</if>
+			<if test="f.parentId != null and f.parentId != '' ">
+				and parent_id like CONCAT('%',#{f.parentId},'%')
+			</if>
+			<if test="f.orgLevelFrom != null and f.orgLevelFrom != '' ">
+				and org_level &gt;=#{f.orgLevelFrom}
+			</if>
+			<if test="f.orgLevelEnd != null and f.orgLevelEnd != '' ">
+				and org_level &lt;= #{f.orgLevelEnd}
+			</if>
+			<if test="f.ordeFrom != null and f.ordeFrom != '' ">
+				and orde &gt;=#{f.ordeFrom}
+			</if>
+			<if test="f.ordeEnd != null and f.ordeEnd != '' ">
+				and orde &lt;= #{f.ordeEnd}
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from sys_org
+		<where>
+			<if test="f.orgName != null and f.orgName != '' ">
+				and org_name like CONCAT('%',#{f.orgName},'%')
+			</if>
+			<if test="f.parentId != null and f.parentId != '' ">
+				and parent_id like CONCAT('%',#{f.parentId},'%')
+			</if>
+			<if test="f.orgLevelFrom != null and f.orgLevelFrom != '' ">
+				and org_level &gt;=#{f.orgLevelFrom}
+			</if>
+			<if test="f.orgLevelEnd != null and f.orgLevelEnd != '' ">
+				and org_level &lt;= #{f.orgLevelEnd}
+			</if>
+			<if test="f.ordeFrom != null and f.ordeFrom != '' ">
+				and orde &gt;=#{f.ordeFrom}
+			</if>
+			<if test="f.ordeEnd != null and f.ordeEnd != '' ">
+				and orde &lt;= #{f.ordeEnd}
+			</if>
+		</where>
+	</select>
+	<select id="getLowerSysOrg" resultMap="resultMap">
+	select 
+	<include refid="column_list" />
+		from sys_org where parent_id in 
+		 <foreach collection ="list" item="parentId" separator="," open="(" close=")">
+         #{parentId}
+    </foreach >
+	</select>
+	
+	<select id="getChildList" parameterType="java.lang.String" resultType="java.lang.String">
+        select uuid from sys_org  where FIND_IN_SET(uuid, getChildLst(#{orgId})); 
+    </select>
+    
+    <select id="getAllList" parameterType="java.lang.String" resultType="java.lang.String">
+        select uuid from sys_org
+    </select>
+	
+</mapper>

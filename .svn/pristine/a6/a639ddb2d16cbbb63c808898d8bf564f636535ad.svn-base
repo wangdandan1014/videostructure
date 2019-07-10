@@ -1,0 +1,372 @@
+package com.sensing.core.utils.kafka;
+
+import java.awt.image.BufferedImage;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import javax.annotation.Resource;
+import javax.imageio.ImageIO;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.listener.BatchAcknowledgingMessageListener;
+import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.stereotype.Component;
+
+import com.alibaba.fastjson.JSONObject;
+import com.sensing.core.alarm.AlarmProcess;
+import com.sensing.core.alarm.AlarmTask;
+import com.sensing.core.alarm.CapBean;
+import com.sensing.core.alarm.CmpProcess;
+import com.sensing.core.bean.Channel;
+import com.sensing.core.bean.KafkaCapMsgM;
+import com.sensing.core.bean.KafkaCapMsgM.pbcapturemsg;
+import com.sensing.core.bean.MotorVehicle;
+import com.sensing.core.bean.NonmotorVehicle;
+import com.sensing.core.bean.Person;
+import com.sensing.core.clickhouseDao.IMotorVehicleCKDAO;
+import com.sensing.core.clickhouseDao.INonmotorVehicleCKDAO;
+import com.sensing.core.clickhouseDao.IPersonCKDAO;
+import com.sensing.core.controller.CapDataPush;
+import com.sensing.core.dao.IAlarmInfoDAO;
+import com.sensing.core.dao.IChannelDAO;
+import com.sensing.core.dao.ICmpDAO;
+import com.sensing.core.dao.ITaskDAO;
+import com.sensing.core.datasave.CKDataSaveService;
+import com.sensing.core.datasave.DataSaveCache;
+import com.sensing.core.datasave.DataSaveThreadPool;
+import com.sensing.core.service.ICapAttrConvertService;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.props.PropUtils;
+
+/**
+ * 订阅接收kafka抓拍数据
+ * <p> Title: CapConsumerListener </p>
+ * <p> Description: </p>
+ * <p> Company: www.sensingtech.com </p>
+ * 
+ * @author mingxingyu
+ * @date 2018年11月16日
+ * @version 1.0
+ */
+@Component
+public class CapConsumerListener extends AbstractKafkaMessageListener
+		implements BatchAcknowledgingMessageListener<String, byte[]> {
+
+	@Resource
+	public ICapAttrConvertService capAttrConvertService;
+	@Resource
+	public ICmpDAO cmpDAO;
+	@Resource
+	public IChannelDAO channelDAO;
+	@Resource
+	public IAlarmInfoDAO alarmInfoDAO;
+	@Resource
+	public IPersonCKDAO personCKDAO;
+	@Resource
+	public IMotorVehicleCKDAO motorVehicleCKDAO;
+	@Resource
+	public INonmotorVehicleCKDAO nonmotorVehicleCKDAO;
+	@Resource
+	public ITaskDAO taskDAO;
+
+	private static Long countTimeFrom = null;
+
+	private Log log = LogFactory.getLog(CapConsumerListener.class);
+
+	/**
+	 * 接收订阅的kafka消息
+	 */
+	public void onMessage(List<ConsumerRecord<String, byte[]>> consumerRecords, Acknowledgment acknowledgment) {
+		try {
+			if (consumerRecords.size() > 0) {
+
+				for (ConsumerRecord<String, byte[]> record : consumerRecords) {
+					// 读取数据key value 反序列化
+					// 引入protoBuf 进行数据反序列化，转成抓拍对象传出
+					if (record.key() == null && record.value() == null) {
+						continue;
+					} else {
+						// 订阅的kafka消息转为抓拍对象
+						pbcapturemsg pbcm = KafkaCapMsgM.pbcapturemsg.parseFrom(record.value());
+						log.info("接收到抓拍消息.抓拍的uuid:"+pbcm.getUuid()+";deviceId:" + pbcm.getDeviceId() + ";capType:" + pbcm.getCapType()
+								+ ";capTime:" + pbcm.getCapTime() + ";capLocation"+(pbcm.getCapLocation().contains("_")?("(record)"):"")+":"+pbcm.getCapLocation()
+								+ ";delay:"+ (System.currentTimeMillis() / 1000 - pbcm.getCapTime()));
+						//将接收到的kafka数据保存到clickhouse
+						DataSaveThreadPool.dataSaveService.submit(new CKDataSaveService(pbcm,personCKDAO,motorVehicleCKDAO,nonmotorVehicleCKDAO,taskDAO));
+
+						// 保存特征文件到本地
+//						if ( pbcm.getDeviceId().equals("cca2573c3c604f5889d35719c3b3545d")  ) {
+//							ByteString capFeature = pbcm.getCapFeature();
+//							if ( capFeature != null && capFeature.size() > 0 ) {
+//								saveFea(capFeature,pbcm.getUuid());
+//							}
+//						}
+							
+						CopyOnWriteArraySet<CapDataPush> sockets = CapDataPush.capWbSockets;
+						int capType = pbcm.getCapType();
+						if (sockets != null && sockets.size() > 0) {
+							for (CapDataPush dataPush : sockets) {
+
+
+								// 判断客户端传递来的通道id是否 和接收到的通道id相等
+								if (dataPush.deviceId != null && pbcm.getDeviceId() != null
+										&& dataPush.deviceId.equals(pbcm.getDeviceId())) {
+									Channel channel = channelDAO.getChannel(pbcm.getDeviceId(),
+											String.valueOf(Constants.DELETE_NO));
+									//该通道关联的结构化任务的需要保存的clickhouse的抓拍类型，为了能够以图搜图
+									Integer[] capTypes = DataSaveCache.deviceIdMap.get(pbcm.getDeviceId());
+									boolean isCmpPhoto = false;
+									if ( DataSaveCache.deviceIdMap.containsKey(pbcm.getDeviceId()) && capTypes != null && Arrays.binarySearch(capTypes, pbcm.getCapType()) > -1 ) {
+										isCmpPhoto = true;
+									}
+									
+									// 1行人，3非机动车，4机动车
+									// 将接受到的kafka数据封装为对象，并翻译属性值，发送给客户端
+									if (capType == Constants.CAP_ANALY_TYPE_PERSON) {
+										Person capPeople = new Person();
+										capPeople.setUuid(pbcm.getUuid());
+										capPeople.setCoatColor(pbcm.getCoatColor());
+										capPeople.setTrousersColor(pbcm.getTrousersColor());
+										capPeople.setBagStyle(pbcm.getBagStyle());
+										capPeople.setBigBagStyle(pbcm.getBigBagStyle());
+										capPeople.setGlass(pbcm.getGlass());
+										capPeople.setCap(pbcm.getCap());
+										capPeople.setCapUrl(pbcm.getCapUrl());
+
+										capPeople.setDeviceId(pbcm.getDeviceId());
+										capPeople.setChannelName(channel.getChannelName());
+										capPeople.setChannelArea(channel.getChannelArea());
+										capPeople.setCapTime((long)pbcm.getCapTime());
+										capPeople.setFrameTime(pbcm.getFrameTime());
+										capPeople.setAge(pbcm.getAge());
+										capPeople.setGenderCode(pbcm.getGenderCode());
+										capPeople.setOrientation(pbcm.getOrientation());
+										capPeople.setMotion(pbcm.getMotion());
+										capPeople.setRespirator(pbcm.getRespirator());
+										capPeople.setCoatLength(pbcm.getCoatLength());
+										capPeople.setCoatTexture(pbcm.getCoatTexture());
+										capPeople.setTrousersLen(pbcm.getTrousersLen());
+										capPeople.setTrousersTexture(pbcm.getTrousersTexture());
+										capPeople.setCapLocation(pbcm.getCapLocation());
+										capPeople.setSeceneUrl(pbcm.getSeceneUrl());
+										capPeople.setChannelArea(channel.getChannelArea());
+										capPeople.setCapFlag(Constants.TASK_TYPE_REALTIME);
+										
+										capPeople = capAttrConvertService.personConvert(capPeople);
+										if (pbcm.getSeceneUrl() != null
+												&& StringUtils.isNotEmpty(pbcm.getSeceneUrl().toString())) {
+											String sceneUrl = capPeople.getSeceneUrl().toString();
+											BufferedImage sceneImg = ImageIO.read(new URL(sceneUrl));
+											if (sceneImg != null) {
+												capPeople.setSceneWidth(sceneImg.getWidth());
+												capPeople.setSceneHeight(sceneImg.getHeight());
+											}
+										}
+										JSONObject jo = JSONObject.parseObject(JSONObject.toJSONString(capPeople));
+										jo.put("isCmpPhoto",isCmpPhoto);
+										dataPush.sendMessage(jo.toJSONString());
+
+									} else if (capType == Constants.CAP_ANALY_TYPE_NONMOTOR_VEHICLE) {
+										NonmotorVehicle nonmotor = new NonmotorVehicle();
+										nonmotor.setUuid(pbcm.getUuid());
+										nonmotor.setCoatColor(pbcm.getCoatColor());
+										nonmotor.setGlass(pbcm.getGlass());
+										nonmotor.setCap(pbcm.getCap());
+										nonmotor.setCapUrl(pbcm.getCapUrl());
+
+										nonmotor.setDeviceId(pbcm.getDeviceId());
+										nonmotor.setChannelName(channel.getChannelName());
+										nonmotor.setChannelArea(channel.getChannelArea());
+										nonmotor.setCapTime((long)pbcm.getCapTime());
+										nonmotor.setFrameTime(pbcm.getFrameTime());
+										nonmotor.setAge(pbcm.getAge());
+										nonmotor.setGenderCode(pbcm.getGenderCode());
+										nonmotor.setOrientation(pbcm.getOrientation());
+										nonmotor.setVehicleColor(pbcm.getVehicleColor());
+										nonmotor.setVehicleClass(pbcm.getVehicleClass());
+										nonmotor.setMotion(pbcm.getMotion());
+										nonmotor.setRespirator(pbcm.getRespirator());
+										nonmotor.setCoatLength(pbcm.getCoatLength());
+										nonmotor.setCoatTexture(pbcm.getCoatTexture());
+										nonmotor.setCapLocation(pbcm.getCapLocation());
+										nonmotor.setSeceneUrl(pbcm.getSeceneUrl());
+										nonmotor.setChannelArea(channel.getChannelArea());
+										nonmotor.setCapFlag(Constants.TASK_TYPE_REALTIME);
+
+										nonmotor = capAttrConvertService.nonmotorVehicleConvert(nonmotor);
+
+										if (pbcm.getSeceneUrl() != null
+												&& StringUtils.isNotEmpty(pbcm.getSeceneUrl().toString())) {
+											String sceneUrl = nonmotor.getSeceneUrl().toString();
+											BufferedImage sceneImg = ImageIO.read(new URL(sceneUrl));
+											if (sceneImg != null) {
+												nonmotor.setSceneWidth(sceneImg.getWidth());
+												nonmotor.setSceneHeight(sceneImg.getHeight());
+											}
+										}
+										JSONObject jo = JSONObject.parseObject(JSONObject.toJSONString(nonmotor));
+										jo.put("isCmpPhoto",isCmpPhoto);
+										dataPush.sendMessage(jo.toJSONString());
+
+									} else if (capType == Constants.CAP_ANALY_TYPE_MOTOR_VEHICLE) {
+										MotorVehicle motor = new MotorVehicle();
+										motor.setUuid(pbcm.getUuid());
+										motor.setPlateNo(pbcm.getPlateNo());
+										motor.setVehicleColor(pbcm.getVehicleColor());
+										motor.setVehicleBrandTag(pbcm.getVehicleBrandTag());
+										motor.setVehicleClass(pbcm.getVehicleClass());
+										motor.setPlateColor(pbcm.getPlateColor());
+										motor.setCapUrl(pbcm.getCapUrl());
+
+										motor.setDeviceId(pbcm.getDeviceId());
+										motor.setChannelName(channel.getChannelName());
+										motor.setChannelArea(channel.getChannelArea());
+										motor.setCapTime((long)pbcm.getCapTime());
+										motor.setFrameTime(pbcm.getFrameTime());
+										motor.setOrientation(pbcm.getOrientation());
+										motor.setPlateClass(pbcm.getPlateClass());
+										motor.setVehicleModelTag(pbcm.getVehicleModelTag());
+										motor.setVehicleStylesTag(pbcm.getVehicleStylesTag());
+										motor.setVehicleMarkerMot(pbcm.getVehicleMarkerMot());
+										motor.setVehicleMarkerTissuebox(pbcm.getVehicleMarkerTissuebox());
+										motor.setVehicleMarkerPendant(pbcm.getVehicleMarkerPendant());
+										motor.setSunvisor(pbcm.getSunvisor());
+										motor.setSafetyBelt(pbcm.getSafetyBelt());
+										motor.setSafetyBeltCopilot(pbcm.getSafetyBeltCopilot());
+										motor.setCalling(pbcm.getCalling());
+										motor.setCapLocation(pbcm.getCapLocation());
+										motor.setSeceneUrl(pbcm.getSeceneUrl());
+										motor.setChannelArea(channel.getChannelArea());
+										motor.setCapFlag(Constants.TASK_TYPE_REALTIME);
+
+										motor = capAttrConvertService.motorVehicleConvert(motor,null);
+										if (pbcm.getSeceneUrl() != null
+												&& StringUtils.isNotEmpty(pbcm.getSeceneUrl().toString())) {
+											String sceneUrl = motor.getSeceneUrl().toString();
+											BufferedImage sceneImg = ImageIO.read(new URL(sceneUrl));
+											if (sceneImg != null) {
+												motor.setSceneWidth(sceneImg.getWidth());
+												motor.setSceneHeight(sceneImg.getHeight());
+											}
+										}
+										JSONObject jo = JSONObject.parseObject(JSONObject.toJSONString(motor));
+										jo.put("isCmpPhoto",isCmpPhoto);
+										dataPush.sendMessage(jo.toJSONString());
+									}
+								}
+							}
+						}
+
+						// 机动车类型的抓拍和分析出的车牌号码不为空的情况，执行告警判断
+						if (capType == Constants.CAP_ANALY_TYPE_MOTOR_VEHICLE
+								&& StringUtils.isNotEmpty(pbcm.getPlateNo())) {
+							log.info("订阅接收到的机动车信息.PlateNo:" + pbcm.getPlateNo() + ",PlateColor:" + pbcm.getPlateColor()
+									+ ",PlateClass:" + pbcm.getPlateClass() + ",VehicleBrandTag:"
+									+ pbcm.getVehicleBrandTag() + ",VehicleColor:" + pbcm.getVehicleColor()
+									+ ",VehicleClass:" + pbcm.getVehicleClass() + ",uuid:" + pbcm.getUuid()
+									+ ",deviceId:" + pbcm.getDeviceId() + ",targetId:" + pbcm.getTargetId());
+//							saveFea(pbcm.getCapFeature(), pbcm.getUuid());
+							putData(pbcm);
+						}
+					}
+				}
+			}
+			// 最后调用acknowledgment的ack方法，提交offset
+			// acknowledgment.acknowledge();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+//
+//	private void saveFea(ByteString capFeature, String capUuid) {
+//		byte[] byteArray = capFeature.toByteArray();
+//
+//		BufferedOutputStream bos = null;
+//		FileOutputStream fos = null;
+//		File file = null;
+//		try {
+//			file = new File("C:\\Users\\Administrator\\Desktop\\fea\\" + capUuid);
+//			fos = new FileOutputStream(file);
+//			bos = new BufferedOutputStream(fos);
+//			bos.write(byteArray);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			if (bos != null) {
+//				try {
+//					bos.close();
+//				} catch (IOException e1) {
+//					e1.printStackTrace();
+//				}
+//			}
+//			if (fos != null) {
+//				try {
+//					fos.close();
+//				} catch (IOException e1) {
+//					e1.printStackTrace();
+//				}
+//			}
+//		}
+//	}
+
+	/**
+	 * 往告警推送抓拍的车辆数据
+	 * 
+	 * @param pbcm
+	 * @author mingxingyu
+	 * @date 2018年11月29日 上午11:01:43
+	 */
+	public void putData(pbcapturemsg pbcm) {
+
+		if (countTimeFrom == null) {
+			countTimeFrom = System.currentTimeMillis() / 1000;
+			for (int i = 0; i < PropUtils.getInt("alarm.cmp.threadcount"); i++) {
+				AlarmTask.dataSaveService.submit(new AlarmProcess(alarmInfoDAO));
+			}
+		}
+
+		CapBean capBean = new CapBean();
+
+		capBean.setCapPlateNo(pbcm.getPlateNo());
+		capBean.setPlateColor(pbcm.getPlateColor());
+		capBean.setVehicleBrandTag(pbcm.getVehicleBrandTag());
+		capBean.setVehicleModelTag(pbcm.getVehicleModelTag());
+		capBean.setVehicleStylesTag(pbcm.getVehicleStylesTag());
+		capBean.setVehicleColor(pbcm.getVehicleColor());
+		capBean.setVehicleClass(pbcm.getVehicleClass());
+		capBean.setDeviceUuid(pbcm.getDeviceId());
+		capBean.setIdentityId(pbcm.getTargetId() + "");
+		capBean.setCapTime((long)pbcm.getCapTime());
+		capBean.setCapUuid(pbcm.getUuid());
+
+		capBean.setCapUrl(pbcm.getCapUrl());
+		capBean.setSceneUrl(pbcm.getSeceneUrl());
+		// 用户保存抓拍的机动车到数据库
+		capBean.setVehicleColor(pbcm.getVehicleColor());
+		capBean.setOrientation(pbcm.getOrientation());
+		capBean.setPlateColor(pbcm.getPlateColor());
+		capBean.setPlateClass(pbcm.getPlateClass());
+		capBean.setVehicleClass(pbcm.getVehicleClass());
+		capBean.setVehicleModelTag(pbcm.getVehicleBrandTag());
+		capBean.setVehicleModelTag(pbcm.getVehicleModelTag());
+		capBean.setVehicleStylesTag(pbcm.getVehicleStylesTag());
+		capBean.setVehicleMarkerMot(pbcm.getVehicleMarkerMot());
+		capBean.setVehicleMarkerTissuebox(pbcm.getVehicleMarkerTissuebox());
+		capBean.setVehicleMarkerPendant(pbcm.getVehicleMarkerPendant());
+		capBean.setSunvisor(pbcm.getSunvisor());
+		capBean.setSafetyBelt(pbcm.getSafetyBelt());
+		capBean.setSafetyBeltCopilot(pbcm.getSafetyBeltCopilot());
+		capBean.setCalling(pbcm.getCalling());
+		capBean.setCapLocation(pbcm.getCapLocation());
+		capBean.setReceiveTime(System.currentTimeMillis());
+		capBean.setFea(pbcm.getCapFeature().toByteArray());
+
+		AlarmTask.cmpService.submit(new CmpProcess(capBean, cmpDAO));
+	}
+
+}

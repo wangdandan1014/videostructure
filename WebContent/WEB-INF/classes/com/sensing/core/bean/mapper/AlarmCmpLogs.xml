@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IAlarmCmpLogsDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.AlarmCmpLogs">
+		<id column="uuid" property="uuid" />
+		<id column="alarm_uuid" property="alarmUuid" />
+		<id column="cmp_uuid" property="cmpUuid" />
+		<id column="cap_uuid" property="capUuid" />
+		<id column="scene_url" property="sceneUrl" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,alarm_uuid,cmp_uuid,cap_uuid,scene_url
+	</sql>
+	<insert id="saveAlarmCmpLogs">
+	   insert into alarm_cmp_logs(uuid,alarm_uuid,cmp_uuid,cap_uuid,scene_url)
+	   values(
+		   #{uuid},#{alarmUuid},#{cmpUuid},#{capUuid},#{sceneUrl}
+	   )
+	</insert>
+	<select id="getAlarmCmpLogs" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from alarm_cmp_logs
+		where id = #{id}
+	</select>
+	<delete id="removeAlarmCmpLogs">
+		delete from alarm_cmp_logs
+		where id = #{id}
+	</delete>
+	<update id="updateAlarmCmpLogs">
+	   update alarm_cmp_logs set alarm_uuid=#{alarmUuid},cmp_uuid=#{cmpUuid},cap_uuid=#{capUuid},scene_url=#{sceneUrl}
+	   where id=#{id}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from alarm_cmp_logs
+		<where>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(id)
+		from alarm_cmp_logs
+		<where>
+		</where>
+	</select>
+</mapper>

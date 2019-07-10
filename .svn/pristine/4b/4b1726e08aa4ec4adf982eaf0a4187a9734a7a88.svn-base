@@ -1,0 +1,26 @@
+package com.sensing.core.dao;
+
+import com.sensing.core.bean.message.SysMessageLog;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+/**
+ * SysMessageLogDAO继承基类
+ */
+public interface ISysMessageLogDAO {
+
+    int insert(SysMessageLog record);
+
+    int setMsgReadByExtendUuId(SysMessageLog m);
+
+    int setMsgReadById(@Param("ids") List<Integer> ids);
+
+    int getUnReadCount(SysMessageLog m);
+
+    List<String> getUnReadByExtengIdAndType(@Param("jobsUuids") List<String> jobsUuids, @Param("type") Integer type);
+
+    List<SysMessageLog> getUnReadByExtengId(@Param("jobsUuids") List<String> jobsUuids);
+
+}

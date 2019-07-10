@@ -1,0 +1,788 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IAlarmDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.Alarm">
+		<id column="uuid" property="uuid" />
+		<id column="device_id" property="deviceId" />
+		<id column="alarm_time" property="alarmTime" />
+		<id column="cap_time" property="capTime" />
+		<id column="cap_uuid" property="capUuid" />
+		<id column="cmp_uuid" property="cmpUuid" />
+		<id column="cmp_templatedb_id" property="cmpTemplatedbId" />
+		<id column="cmp_obj_uuid" property="cmpObjUuid" />
+		<id column="cmp_score" property="cmpScore" />
+		<id column="job_uuid" property="jobUuid" />
+		<id column="state" property="state" />
+		<id column="state_time" property="stateTime" />
+		<id column="state_memo" property="stateMemo" />
+		<id column="matched_count" property="matchedCount" />
+		<id column="alarm_id" property="alarmId" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,device_id,alarm_time,cap_time,cap_uuid,cmp_uuid,cmp_templatedb_id,cmp_obj_uuid,cmp_score,job_uuid,state,state_time,state_memo,matched_count,alarm_id
+	</sql>
+	<insert id="saveAlarm">
+		insert into
+		alarm(uuid,device_id,alarm_time,cap_time,cap_uuid,cmp_uuid,cmp_templatedb_id,cmp_obj_uuid,cmp_score,job_uuid,alarm_id)
+		values(
+		#{uuid},#{deviceId},#{alarmTime},#{capTime},#{capUuid},#{cmpUuid},#{cmpTemplatedbId},#{cmpObjUuid},#{cmpScore},#{jobUuid},#{alarmId}
+		)
+	</insert>
+	<select id="getAlarm" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from alarm
+		where uuid = #{uuid}
+	</select>
+	<select id="queryByUuid"
+		resultType="com.sensing.core.bean.alarm.resp.AlarmDetailResp">
+		SELECT DISTINCT
+		a.uuid,
+		a.alarm_time as alarmTime,
+		a.state,
+		a.state_memo
+		as stateMemo,
+		a.cmp_obj_uuid as cmpObjUuid,
+		a.alarm_id as alarmId,
+		j.uuid as jobsUuid,
+		j.`name`
+		AS jobsName,
+		<!-- j.jobs_type as -->
+		<!-- jobsType, -->
+		IFNULL(j.jobs_type,3) as jobsType,
+		j.begin_date as startDate,
+		j.end_date as endDate,
+		j.begin_time as startTime,
+		j.end_time as endTime,
+		j.run_week as runWeek,
+		j.level as level,
+		db.template_db_name as templateDbName,
+		db.template_db_type as itemId
+		FROM
+		`alarm` a
+		LEFT JOIN jobs j ON
+		j.uuid
+		= a.job_uuid
+		LEFT JOIN template_db db
+		ON
+		db.id
+		=
+		a.cmp_templatedb_id
+		WHERE
+		a.uuid =
+		#{uuid}
+	</select>
+
+	<!-- 首页的最新四条告警信息查询 -->
+	<select id="queryAlarmHomePage" resultType="java.util.HashMap">
+		SELECT
+		a.uuid
+		alarmUuid,
+		FROM_UNIXTIME(a.alarm_time) alarmTime,
+		tom.main_template_url
+		mainTemplateUrl,
+		tom.plate_no plateNo,
+		tom.plate_color plateColor,
+		c.cap_url capUrl,
+		a.state state,
+		a.matched_count matchedCount,
+		a.job_uuid jobUuid,
+		j.NAME jobName,
+		j.level jobLevel
+		FROM
+		alarm a,
+		capture c,
+		template_obj_motor tom,
+		jobs j,
+		sys_subscribe ss
+		WHERE
+		a.job_uuid = j.uuid
+		AND a.cap_uuid = c.uuid
+		AND a.cmp_obj_uuid = tom.uuid
+		And a.state = #{state}
+		AND ss.job_id =
+		a.job_uuid
+		AND ss.uid = #{userUuid}
+		ORDER BY a.alarm_time DESC
+		limit #{pageRows};
+	</select>
+	<select id="queryImgByUuid"
+		resultType="com.sensing.core.bean.alarm.resp.CapImgResp">
+		SELECT DISTINCT
+		acl.scene_url as sceneUrl,
+		c.cap_url as
+		imgUrl,
+		c.cap_time as capTime,
+		acl.cap_uuid as uuid
+		FROM
+		`alarm` a
+		LEFT
+		JOIN alarm_cmp_logs acl ON a.uuid = acl.alarm_uuid
+		LEFT JOIN capture c
+		ON c.uuid = acl.cap_uuid
+		WHERE
+		a.uuid = #{uuid}
+	</select>
+	<delete id="removeAlarm">
+		delete from alarm
+		where id = #{id}
+	</delete>
+	<update id="updateAlarm">
+		update alarm set
+		state=#{state},state_memo=#{stateMemo},state_time=#{stateTime}
+		where
+		uuid=#{uuid}
+	</update>
+	<select id="queryAlarmData"
+		resultType="com.sensing.core.bean.alarm.resp.AlarmResp">
+		SELECT
+		a.uuid,
+		a.state,
+		a.alarm_time as alarmTime,
+		a.state_memo as
+		stateMemo,
+		a.matched_count as appearCount,
+		a.cap_uuid as capUuid,
+		a.alarm_id as alarmId,
+		c.cap_url as capImgUrl,
+		c.plate_no as
+		alarmPlateNo,
+		tom.main_template_url as imgUrl,
+		tom.plate_no as plateNo,
+		j.name as
+		jobsName,
+		j.uuid as JobsUuid,
+		j.level as level,
+		IFNULL(j.jobs_type,3) as
+		jobsType,
+		ch.channel_name as channelName,
+		ch.channel_area as deviceArea,
+		db.template_db_name as templateDbName
+		FROM
+		alarm a
+		LEFT JOIN capture c ON
+		a.cap_uuid = c.uuid
+		LEFT JOIN jobs j
+		ON a.job_uuid = j.uuid
+		LEFT JOIN
+		channel ch ON a.device_id = ch.uuid
+		LEFT JOIN template_obj_motor tom ON
+		a.cmp_obj_uuid = tom.uuid
+		LEFT JOIN
+		template_db db ON
+		a.cmp_templatedb_id = db.id
+		<where>
+		<if test="f.alarmId == null or f.alarmId == '' ">
+			<if test="f.state != null and f.state != '' and f.state != 0 ">
+				AND a.state = #{f.state}
+			</if>
+			<if test="f.startTime != null and f.startTime != '' ">
+				AND a.alarm_time >= unix_timestamp(#{f.startTime})
+			</if>
+			<if test="f.endTime != null and f.endTime != '' ">
+			<![CDATA[
+				AND a.alarm_time <= unix_timestamp(#{f.endTime})
+            ]]>
+			</if>
+			<if test="f.level != null and f.level != '' and f.level != 0 ">
+				AND j.`level` = #{f.level}
+			</if>
+			<if	test="f.jobsType != null and f.jobsType != '' and  f.jobsType != 0 ">
+				AND j.jobs_type = #{f.jobsType}
+			</if>
+			<if	test="deviceIds != null and deviceIds != '' and deviceIds.length > 0 ">
+				AND a.device_id IN
+				<foreach collection="deviceIds" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="uuids != null and uuids != '' and uuids.length > 0 ">
+				AND a.uuid IN
+				<foreach collection="uuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</if>
+			<if	test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND j.uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="f.alarmId != null and f.alarmId != '' ">
+				and a.alarm_id like CONCAT('%',#{f.alarmId},'%')
+			</if>
+		</where>
+		ORDER BY a.alarm_time DESC,a.job_level ASC
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="queryCapUuids" resultType="String">
+		SELECT
+		a.cap_uuid as capUuid
+		FROM
+		alarm a
+		LEFT JOIN capture c ON
+		a.cap_uuid = c.uuid
+		LEFT JOIN jobs j ON a.job_uuid = j.uuid
+		<where>
+			<if test="f.state != null and f.state != '' and f.state != 0 ">
+				AND a.state = #{f.state}
+			</if>
+			<if test="f.startTime != null and f.startTime != '' ">
+				AND a.alarm_time >= unix_timestamp(#{f.startTime})
+			</if>
+			<if test="f.endTime != null and f.endTime != '' ">
+			<![CDATA[
+				AND a.alarm_time <= unix_timestamp(#{f.endTime})
+            ]]>
+			</if>
+			<if test="f.level != null and f.level != '' and f.level != 0 ">
+				AND j.`level` = #{f.level}
+			</if>
+			<if
+				test="f.jobsType != null and f.jobsType != '' and  f.jobsType != 0 ">
+				AND j.jobs_type = #{f.jobsType}
+			</if>
+			<if
+				test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND j.uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if
+				test="deviceIds != null and deviceIds != '' and deviceIds.length > 0 ">
+				AND a.device_id IN
+				<foreach collection="deviceIds" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="uuids != null and uuids != '' and uuids.length > 0 ">
+				AND a.uuid IN
+				<foreach collection="uuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="queryList"
+		resultType="com.sensing.core.bean.alarm.resp.AlarmResp">
+		SELECT
+		a.uuid,
+		a.state,
+		a.alarm_time as alarmTime,
+		a.matched_count as
+		appearCount,
+		a.alarm_id as alarmId,
+		c.cap_url as capImgUrl,
+		tom.main_template_url as imgUrl,
+		tom.plate_no as plateNo,
+		tom.plate_color as plateColor,
+		j.name as jobsName,
+		j.uuid as JobsUuid,
+		j.level
+		as level,
+		j.jobs_type as jobsType
+		FROM
+		alarm a
+		LEFT JOIN capture
+		c ON a.cap_uuid = c.uuid
+		LEFT JOIN jobs j ON a.job_uuid = j.uuid
+		LEFT JOIN template_obj_motor tom ON a.cmp_obj_uuid = tom.uuid
+		<if test="f.itemId != null and f.itemId != '' and f.itemId != 0 ">
+		LEFT JOIN template_db db ON a.cmp_templatedb_id = db.id
+		</if>
+<!-- 		and j.jobs_type = 3  -->
+		<where>
+			<if test="f.state != null and f.state != '' and f.state != 0 ">
+				AND a.state = #{f.state}
+			</if>
+			<if test="f.startTime != null and f.startTime != '' ">
+				AND a.alarm_time >= unix_timestamp(#{f.startTime})
+			</if>
+			<if test="f.endTime != null and f.endTime != '' ">
+			<![CDATA[
+				AND a.alarm_time <= unix_timestamp(#{f.endTime})
+            ]]>
+			</if>
+			<if test="f.alarmId != null and f.alarmId != '' ">
+				and a.alarm_id like CONCAT('%',#{f.alarmId},'%')
+			</if>
+			<if test="f.level != null and f.level != '' and f.level != 0 ">
+				AND a.job_level = #{f.level}
+			</if>
+			<if test="f.itemId != null and f.itemId != '' and f.itemId != 0 ">
+				AND db.template_db_type = #{f.itemId}
+			</if>
+<!-- 			<if -->
+<!-- 				test="f.jobsType != null and f.jobsType != '' and  f.jobsType != 0 "> -->
+<!-- 				AND j.jobs_type = #{f.jobsType} -->
+<!-- 			</if> -->
+
+			<if
+				test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND j.uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if
+				test="deviceIds != null and deviceIds != '' and deviceIds.length > 0 ">
+				AND a.device_id IN
+				<foreach collection="deviceIds" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="uuids != null and uuids != '' and uuids.length > 0 ">
+				AND a.uuid IN
+				<foreach collection="uuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		ORDER BY a.alarm_time DESC,a.job_level ASC
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="queryByAlarmId"
+		resultType="com.sensing.core.bean.alarm.resp.AlarmResp">
+		SELECT
+		a.uuid,
+		a.state,
+		a.alarm_time as alarmTime,
+		a.matched_count as
+		appearCount,
+		a.alarm_id as alarmId,
+		c.cap_url as capImgUrl,
+		tom.main_template_url as imgUrl,
+		tom.plate_no as plateNo,
+		tom.plate_color as plateColor,
+		j.name as jobsName,
+		j.uuid as JobsUuid,
+		j.level
+		as level,
+		IFNULL(j.jobs_type,3) as jobsType
+		FROM
+		alarm a
+		LEFT JOIN capture
+		c ON a.cap_uuid = c.uuid
+		LEFT JOIN jobs j ON a.job_uuid = j.uuid
+		LEFT
+		JOIN template_obj_motor tom ON a.cmp_obj_uuid = tom.uuid
+		<where>
+			<if test="f.alarmId != null and f.alarmId != '' ">
+				a.alarm_id like CONCAT('%',#{f.alarmId},'%')
+			</if>
+			<if
+				test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND j.uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		ORDER BY a.alarm_time DESC, a.uuid DESC
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<!-- <select id="queryList" -->
+	<!-- resultType="com.sensing.core.bean.alarm.resp.AlarmResp"> -->
+	<!-- SELECT DISTINCT -->
+	<!-- a.uuid, -->
+	<!-- c.cap_url as capImgUrl, -->
+	<!-- t.image_url as -->
+	<!-- imgUrl, -->
+	<!-- db.template_db_type as templateDbType, -->
+	<!-- j.name as jobsName, -->
+	<!-- j.uuid as JobsUuid, -->
+	<!-- j.level as level, -->
+	<!-- IFNULL(j.jobs_type,3) as jobsType, -->
+	<!-- j.jobs_type as jobsType, -->
+	<!-- a.state, -->
+	<!-- a.alarm_time as -->
+	<!-- alarmTime, -->
+	<!-- a.matched_count as appearCount, -->
+	<!-- ch.channel_name as channelName, -->
+	<!-- c.device_area as deviceArea, -->
+	<!-- c.plate_no -->
+	<!-- as alarmPlateNo, -->
+	<!-- tom.plate_no as plateNo, -->
+	<!-- db.template_db_name as -->
+	<!-- templateDbName -->
+	<!-- FROM -->
+	<!-- alarm a, -->
+	<!-- capture c, -->
+	<!-- jobs j, -->
+	<!-- template_db db, channel ch, -->
+	<!-- template_obj_motor tom -->
+	<!-- LEFT JOIN template t ON -->
+	<!-- tom.main_template_uuid = -->
+	<!-- t.uuid -->
+	<!-- <where> -->
+	<!-- a.cap_uuid = c.uuid -->
+	<!-- AND a.job_uuid -->
+	<!-- = j.uuid -->
+	<!-- AND a.cmp_templatedb_id = -->
+	<!-- db.id -->
+	<!-- AND a.cmp_obj_uuid = tom.uuid AND a.device_id = ch.uuid -->
+	<!-- <if test="f.state != null and f.state != '' and f.state != 0 "> -->
+	<!-- AND a.state = #{f.state} -->
+	<!-- </if> -->
+	<!-- <if test="f.startTime != null and f.startTime != '' "> -->
+	<!-- AND a.alarm_time > unix_timestamp(#{f.startTime}) -->
+	<!-- </if> -->
+	<!-- <if test="f.endTime != null and f.endTime != '' "> -->
+	<!-- <![CDATA[ -->
+	<!-- AND a.alarm_time < unix_timestamp(#{f.endTime}) -->
+	<!-- ]]> -->
+	<!-- </if> -->
+	<!-- <if test="f.level != null and f.level != '' and f.level != 0 "> -->
+	<!-- AND j.`level` = #{f.level} -->
+	<!-- </if> -->
+	<!-- <if -->
+	<!-- test="f.jobsType != null and f.jobsType != '' and f.jobsType != 0 "> -->
+	<!-- AND j.jobs_type = #{f.jobsType} -->
+	<!-- </if> -->
+	<!-- <if -->
+	<!-- test="jobUuids != null and jobUuids != '' and jobUuids.length > 0"> -->
+	<!-- AND a.job_uuid IN -->
+	<!-- <foreach collection="jobUuids" index="index" item="item" -->
+	<!-- open="(" separator="," close=")"> -->
+	<!-- #{item} -->
+	<!-- </foreach> -->
+	<!-- </if> -->
+	<!-- <if -->
+	<!-- test="deviceIds != null and deviceIds != '' and deviceIds.length > 
+		0 "> -->
+	<!-- AND a.device_id IN -->
+	<!-- <foreach collection="deviceIds" index="index" item="item" -->
+	<!-- open="(" separator="," close=")"> -->
+	<!-- #{item} -->
+	<!-- </foreach> -->
+	<!-- </if> -->
+	<!-- <if test="uuids != null and uuids != '' and uuids.length > 0 "> -->
+	<!-- AND a.uuid IN -->
+	<!-- <foreach collection="uuids" index="index" item="item" -->
+	<!-- open="(" separator="," close=")"> -->
+	<!-- #{item} -->
+	<!-- </foreach> -->
+	<!-- </if> -->
+	<!-- </where> -->
+	<!-- ORDER BY -->
+	<!-- a.alarm_time DESC -->
+	<!-- <if test="pageFlag != null and pageFlag == 'pageFlag'"> -->
+	<!-- LIMIT #{beginCount},#{pageRows} -->
+	<!-- </if> -->
+	<!-- </select> -->
+	<select id="selectCount" resultType="int">
+		select
+		count(a.uuid)
+		FROM
+		alarm a
+		<!-- 加if的情况下报警列表级别筛选报错 -->
+		<!-- <if test=" (f.jobsType != null and f.jobsType != '' and f.jobsType 
+			!= 0 ) or (jobUuids != null and jobUuids != '' and jobUuids.length > 0) "> -->
+		<if
+			test=" (f.level != null and f.level != '' and f.level != 0) or (f.jobsType != null and f.jobsType != '' and  f.jobsType != 0 ) or (jobUuids != null and jobUuids != '' and jobUuids.length > 0)">
+			LEFT JOIN jobs j ON a.job_uuid = j.uuid
+		</if>
+		<if test="f.itemId != null and f.itemId != '' and f.itemId != 0 ">
+		LEFT JOIN template_db db ON a.cmp_templatedb_id = db.id
+		</if>
+		<!-- </if> -->
+		<where>
+			<if test="f.state != null and f.state != '' and f.state != 0 ">
+				AND a.state = #{f.state}
+			</if>
+			<if test="f.startTime != null and f.startTime != '' ">
+				AND a.alarm_time >= unix_timestamp(#{f.startTime})
+			</if>
+			<if test="f.endTime != null and f.endTime != '' ">
+			<![CDATA[
+				AND a.alarm_time <= unix_timestamp(#{f.endTime})
+            ]]>
+			</if>
+			<if test="f.alarmId != null and f.alarmId != '' ">
+				and a.alarm_id like CONCAT('%',#{f.alarmId},'%')
+			</if>
+			<if test="f.level != null and f.level != '' and f.level != 0 ">
+				AND a.job_level = #{f.level}
+			</if>
+			<if test="f.itemId != null and f.itemId != '' and f.itemId != 0 ">
+				AND db.template_db_type = #{f.itemId}
+			</if>
+<!-- 			<if -->
+<!-- 				test="f.jobsType != null and f.jobsType != '' and  f.jobsType != 0 "> -->
+<!-- 				AND j.jobs_type = #{f.jobsType} -->
+<!-- 			</if> -->
+			<if
+				test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND j.uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if
+				test="deviceIds != null and deviceIds != '' and deviceIds.length > 0 ">
+				AND a.device_id IN
+				<foreach collection="deviceIds" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="uuids != null and uuids != '' and uuids.length > 0 ">
+				AND a.uuid IN
+				<foreach collection="uuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+	</select>
+	<select id="queryByAlarmIdCount" resultType="int">
+		select
+		count(a.uuid)
+		FROM
+		alarm a
+		LEFT JOIN jobs j ON a.job_uuid = j.uuid
+		<!-- 加if的情况下报警列表级别筛选报错 -->
+		<!-- <if test=" (f.jobsType != null and f.jobsType != '' and f.jobsType 
+			!= 0 ) or (jobUuids != null and jobUuids != '' and jobUuids.length > 0) "> -->
+		<!-- <if test=" (f.level != null and f.level != '' and f.level != 0) or 
+			(f.jobsType != null and f.jobsType != '' and f.jobsType != 0 ) or (jobUuids 
+			!= null and jobUuids != '' and jobUuids.length > 0)"> -->
+		<!-- LEFT JOIN jobs j ON a.job_uuid = j.uuid -->
+		<!-- </if> -->
+		<!-- </if> -->
+		<where>
+			<if test="f.alarmId != null and f.alarmId != '' ">
+				and a.alarm_id like CONCAT('%',#{f.alarmId},'%')
+			</if>
+			<if
+				test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND j.uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+	</select>
+	<!-- <select id="selectCount" resultType="int"> -->
+	<!-- select -->
+	<!-- count(a.uuid) -->
+	<!-- FROM -->
+	<!-- alarm a, -->
+	<!-- capture c, -->
+	<!-- jobs j, -->
+	<!-- template_db db, -->
+	<!-- template_obj_motor tom -->
+	<!-- LEFT JOIN template t ON -->
+	<!-- tom.main_template_uuid = -->
+	<!-- t.uuid -->
+	<!-- <where> -->
+	<!-- a.cap_uuid = c.uuid -->
+	<!-- AND a.job_uuid -->
+	<!-- = j.uuid -->
+	<!-- AND a.cmp_templatedb_id = -->
+	<!-- db.id -->
+	<!-- AND a.cmp_obj_uuid = tom.uuid -->
+	<!-- <if test="f.state != null and f.state != '' and f.state != 0 "> -->
+	<!-- AND a.state = #{f.state} -->
+	<!-- </if> -->
+	<!-- <if test="f.startTime != null and f.startTime != '' "> -->
+	<!-- AND a.alarm_time > unix_timestamp(#{f.startTime}) -->
+	<!-- </if> -->
+	<!-- <if test="f.endTime != null and f.endTime != '' "> -->
+	<!-- <![CDATA[ -->
+	<!-- AND a.alarm_time < unix_timestamp(#{f.endTime}) -->
+	<!-- ]]> -->
+	<!-- </if> -->
+	<!-- <if test="f.level != null and f.level != '' and f.level != 0 "> -->
+	<!-- AND j.`level` = #{f.level} -->
+	<!-- </if> -->
+	<!-- <if -->
+	<!-- test="f.jobsType != null and f.jobsType != '' and f.jobsType != 0 "> -->
+	<!-- AND j.jobs_type = #{f.jobsType} -->
+	<!-- </if> -->
+	<!-- <if -->
+	<!-- test="jobUuids != null and jobUuids != '' and jobUuids.length > 0 "> -->
+	<!-- AND a.job_uuid IN -->
+	<!-- <foreach collection="jobUuids" index="index" item="item" -->
+	<!-- open="(" separator="," close=")"> -->
+	<!-- #{item} -->
+	<!-- </foreach> -->
+	<!-- </if> -->
+	<!-- <if -->
+	<!-- test="deviceIds != null and deviceIds != '' and deviceIds.length > 
+		0 "> -->
+	<!-- AND a.device_id IN -->
+	<!-- <foreach collection="deviceIds" index="index" item="item" -->
+	<!-- open="(" separator="," close=")"> -->
+	<!-- #{item} -->
+	<!-- </foreach> -->
+	<!-- </if> -->
+	<!-- <if test="uuids != null and uuids != '' and uuids.length > 0 "> -->
+	<!-- AND a.uuid IN -->
+	<!-- <foreach collection="uuids" index="index" item="item" -->
+	<!-- open="(" separator="," close=")"> -->
+	<!-- #{item} -->
+	<!-- </foreach> -->
+	<!-- </if> -->
+	<!-- </where> -->
+	<!-- </select> -->
+
+	<select id="queryAlarmStatistics" resultType="java.util.HashMap">
+		SELECT
+			(SELECT COUNT(1) from alarm a where a.alarm_time &gt;= #{startTime} and a.alarm_time &lt;= #{endTime}) as todayAlarmCount,
+			(SELECT COUNT(1) from alarm a where a.state = #{state} and a.alarm_time &gt;= #{startTime} and a.alarm_time &lt;= #{endTime}) as unVerifyAlarmCount
+		FROM
+			DUAL;
+	</select>
+
+	<select id="getAlarmCountByJobsUuId"
+		resultType="com.sensing.core.bean.job.resp.JobAlarmCount">
+		select a.job_uuid As jobUuid,count(*) as count
+		from alarm a
+		where
+		a.job_uuid in
+		<foreach collection="jobsUuids" item="item" index="index"
+			open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		group by a.job_uuid
+	</select>
+	<select id="nextUuid" resultType="String">
+		SELECT a.uuid FROM alarm a
+		<where>
+			1=1
+			<if test="f.state != null and f.state != '' and f.state != 0 ">
+				AND a.state = #{f.state}
+			</if>
+			<if test="f.startTime != null and f.startTime != '' ">
+				AND a.alarm_time >= unix_timestamp(#{f.startTime})
+			</if>
+			<if test="f.endTime != null and f.endTime != '' ">
+			<![CDATA[
+				AND a.alarm_time <= unix_timestamp(#{f.endTime})
+            ]]>
+			</if>
+			<if test="f.level != null and f.level != '' and f.level != 0 ">
+				AND a.job_level = #{f.level}
+			</if>
+			
+			<if test="f.alarmId != null and f.alarmId != '' ">
+				and a.alarm_id like CONCAT('%',#{f.alarmId},'%')
+			</if>
+
+			<if
+				test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND a.job_uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if
+				test="deviceIds != null and deviceIds != '' and deviceIds.length > 0 ">
+				AND a.device_id IN
+				<foreach collection="deviceIds" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="uuids != null and uuids != '' and uuids.length > 0 ">
+				AND a.uuid IN
+				<foreach collection="uuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			AND (( a.alarm_time = ( SELECT al.alarm_time FROM alarm al WHERE
+			al.uuid = #{f.uuid} )
+			AND a.uuid &lt; #{f.uuid} )
+			OR ( a.alarm_time &lt; ( SELECT al.alarm_time
+			FROM alarm al WHERE al.uuid = #{f.uuid} ) ))
+		</where>
+		ORDER BY
+		a.alarm_time DESC,
+		a.uuid DESC
+		LIMIT 0, 1
+	</select>
+	<select id="prevUuid" resultType="String">
+		SELECT a.uuid FROM alarm a
+		<where>
+			1=1
+			<if test="f.state != null and f.state != '' and f.state != 0 ">
+				AND a.state = #{f.state}
+			</if>
+			<if test="f.startTime != null and f.startTime != '' ">
+				AND a.alarm_time >= unix_timestamp(#{f.startTime})
+			</if>
+			<if test="f.endTime != null and f.endTime != '' ">
+			<![CDATA[
+				AND a.alarm_time <= unix_timestamp(#{f.endTime})
+            ]]>
+			</if>
+			<if test="f.level != null and f.level != '' and f.level != 0 ">
+				AND a.job_level = #{f.level}
+			</if>
+			
+			<if test="f.alarmId != null and f.alarmId != '' ">
+				and a.alarm_id like CONCAT('%',#{f.alarmId},'%')
+			</if>
+
+			<if
+				test="jobUuids != null and jobUuids != '' and jobUuids.length > 0">
+				AND a.job_uuid IN
+				<foreach collection="jobUuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if
+				test="deviceIds != null and deviceIds != '' and deviceIds.length > 0 ">
+				AND a.device_id IN
+				<foreach collection="deviceIds" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="uuids != null and uuids != '' and uuids.length > 0 ">
+				AND a.uuid IN
+				<foreach collection="uuids" index="index" item="item"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			AND (( a.alarm_time = ( SELECT al.alarm_time FROM alarm al WHERE
+			al.uuid = #{f.uuid} )
+			AND a.uuid &gt; #{f.uuid} )
+			OR ( a.alarm_time &gt; ( SELECT al.alarm_time
+			FROM alarm al WHERE al.uuid = #{f.uuid} ) ))
+		</where>
+		ORDER BY
+		a.alarm_time ASC,
+		a.uuid ASC
+		LIMIT 0, 1
+	</select>
+
+</mapper>

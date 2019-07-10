@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IRpcLogDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.RpcLog">
+		<id column="id" property="id" />
+		<id column="call_time" property="callTime" />
+		<id column="mode" property="mode" />
+		<id column="module" property="module" />
+		<id column="todo" property="todo" />
+		<id column="name" property="name" />
+		<id column="ip" property="ip" />
+		<id column="port" property="port" />
+		<id column="rpc_type" property="rpcType" />
+		<id column="ms" property="ms" />
+		<id column="result" property="result" />
+		<id column="memo" property="memo" />
+		<id column="error_msg" property="errorMsg" />
+		<id column="type" property="type"/>
+		<id column="create_user" property="createUser"/>
+		<id column="username" property="userName"/>
+		 <id column="num" property="num"/>
+		<association property="roleName" column="create_user"                       
+            select="com.sensing.core.dao.ISysUserDAO.getRoleNameByUser" />
+	</resultMap>
+	<resultMap id="resultMapLogin" type="com.sensing.core.bean.RpcLogLogin">
+		<id column="id" property="id" />
+		<id column="call_time" property="callTime" />
+		<id column="todo" property="todo" />
+		<id column="ip" property="ip" />
+		<id column="username" property="userName"/>
+		 <id column="num" property="num"/> 
+		<association property="roleName" column="create_user"                       
+            select="com.sensing.core.dao.ISysUserDAO.getRoleNameByUser" />
+	</resultMap>
+	<resultMap id="resultMapRun" type="com.sensing.core.bean.RpcLogRun">
+		<id column="id" property="id" />
+		<id column="call_time" property="callTime" />
+		<id column="todo" property="todo" />
+		<id column="error_msg" property="errorMsg" />
+		<id column="num" property="num"/>
+	</resultMap>
+	<sql id="column_list">
+		 l.id,l.call_time,l.mode,l.module,l.todo,l.name,l.ip,l.port,l.rpc_type,l.ms,l.result,l.memo,l.error_msg,l.type,l.create_user,(@i:=@i+1) num
+	</sql>
+	<insert id="saveRpcLog" useGeneratedKeys="true" keyProperty="id" parameterType="com.sensing.core.bean.RpcLog">
+	   insert into rpc_log(call_time,mode,module,todo,name,ip,port,rpc_type,ms,result,memo,error_msg,type,create_user)
+	   values(
+		   #{callTime},#{mode},#{module},#{todo},#{name},#{ip},#{port},#{rpcType},#{ms},#{result},#{memo},#{errorMsg},
+		   #{type},#{createUser}
+	   )
+	</insert>
+	<delete id="removeRpcLog">
+		delete from rpc_log
+		where id = #{id}
+	</delete>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />,u.username
+		from rpc_log l
+		left join sys_user u on l.create_user=u.uuid
+		<where>
+			<if test="f.callTimeFrom != null and f.callTimeFrom != '' ">
+				and l.call_time &gt;=#{f.callTimeFrom}
+			</if>
+			<if test="f.callTimeEnd != null and f.callTimeEnd != '' ">
+				and l.call_time &lt;= #{f.callTimeEnd}
+			</if>
+			<if test="f.module != null and f.module != '' ">
+				and l.module =#{f.module}
+			</if>
+			<if test="f.todo != null and f.todo != '' ">
+				and l.todo=#{f.todo}
+			</if>
+			<if test="f.ip != null and f.ip != '' ">
+				and l.ip like concat('%',#{f.ip},'%')
+			</if>
+			<if test="f.result != null and f.result != '' ">
+				and l.result #{f.result}
+			</if>
+			<if test="f.errorMsg != null and f.errorMsg != '' ">
+				and l.error_msg like CONCAT('%',#{f.errorMsg},'%')
+			</if>
+			<if test="f.userName !=null and f.userName !='' ">
+				and l.create_user in (select uuid from sys_user where username like CONCAT('%',#{f.userName},'%'))
+			</if>
+			<if test="f.type !=null and f.type !=''">
+				and l.type=#{f.type}
+			</if>
+			<if test=" f.ipOrUserName != null and f.ipOrUserName != '' ">
+				and ( l.ip like concat('%',#{f.ipOrUserName},'%') or l.create_user in (select uuid from sys_user where username like CONCAT('%',#{f.ipOrUserName},'%')) )
+			</if>
+		</where>
+		order by l.call_time desc ,l.id desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="Integer">
+		select
+		count(l.id)
+		from rpc_log l
+		left join sys_user u on l.create_user=u.uuid
+		<where>
+			<if test="f.callTimeFrom != null and f.callTimeFrom != '' ">
+				and l.call_time &gt;=#{f.callTimeFrom}
+			</if>
+			<if test="f.callTimeEnd != null and f.callTimeEnd != '' ">
+				and l.call_time &lt;= #{f.callTimeEnd}
+			</if>
+			<if test="f.module != null and f.module != '' ">
+				and l.module =#{f.module}
+			</if>
+			<if test="f.todo != null and f.todo != '' ">
+				and l.todo=#{f.todo}
+			</if>
+			<if test="f.ip != null and f.ip != '' ">
+				and l.ip like concat('%',#{f.ip},'%')
+			</if>
+			<if test="f.result != null and f.result != '' ">
+				and l.result #{f.result}
+			</if>
+			<if test="f.errorMsg != null and f.errorMsg != '' ">
+				and l.error_msg like CONCAT('%',#{f.errorMsg},'%')
+			</if>
+			<if test="f.userName !=null and f.userName !='' ">
+				and l.create_user in (select uuid from sys_user where username like CONCAT('%',#{f.userName},'%'))
+			</if>
+			<if test="f.type !=null and f.type !=''">
+				and l.type=#{f.type}
+			</if>
+			<if test=" f.ipOrUserName != null and f.ipOrUserName != '' ">
+				and ( l.ip like concat('%',#{f.ipOrUserName},'%') or l.create_user in (select uuid from sys_user where username like CONCAT('%',#{f.ipOrUserName},'%')) )
+			</if>
+		</where>
+	</select>
+	<select id="queryRpcLog" resultMap="resultMap">
+		select
+		<include refid="column_list" />,u.username
+		from rpc_log l
+		left join sys_user u on l.create_user=u.uuid, (select @i:=0)t
+		<where>
+			<if test="callTimeFrom != null and callTimeFrom != '' ">
+				and l.call_time &gt;=#{callTimeFrom}
+			</if>
+			<if test="callTimeEnd != null and callTimeEnd != '' ">
+				and l.call_time &lt;= #{callTimeEnd}
+			</if>
+			<if test="module != null and module != '' ">
+				and l.module =#{module}
+			</if>
+			<if test="todo != null and todo != '' ">
+				and l.todo=#{todo}
+			</if>
+			<if test="ip != null and ip != '' ">
+				and l.ip =#{ip}
+			</if>
+			<if test="result != null and result != '' ">
+				and l.result #{result}
+			</if>
+			<if test="errorMsg != null and errorMsg != '' ">
+				and l.error_msg like CONCAT('%',#{errorMsg},'%')
+			</if>
+			<if test="userName !=null and userName !='' ">
+				and l.create_user in (select uuid from sys_user where username like CONCAT('%',#{userName},'%'))
+			</if>
+			<if test="type !=null and type !=''">
+				and l.type=#{type}
+			</if>
+		</where>
+		order by call_time desc ,id desc
+	</select>
+	<select id="queryRpcLoginLog" resultMap="resultMapLogin">
+		select
+		<include refid="column_list" />,u.username
+		from rpc_log l
+		left join sys_user u on l.create_user=u.uuid, (select @i:=0)t
+		<where>
+			<if test="callTimeFrom != null and callTimeFrom != '' ">
+				and l.call_time &gt;=#{callTimeFrom}
+			</if>
+			<if test="callTimeEnd != null and callTimeEnd != '' ">
+				and l.call_time &lt;= #{callTimeEnd}
+			</if>
+			<if test="module != null and module != '' ">
+				and l.module =#{module}
+			</if>
+			<if test="todo != null and todo != '' ">
+				and l.todo=#{todo}
+			</if>
+			<if test="ip != null and ip != '' ">
+				and l.ip =#{ip}
+			</if>
+			<if test="result != null and result != '' ">
+				and l.result #{result}
+			</if>
+			<if test="errorMsg != null and errorMsg != '' ">
+				and l.error_msg like CONCAT('%',#{errorMsg},'%')
+			</if>
+			<if test="userName !=null and userName !='' ">
+				and l.create_user in (select uuid from sys_user where username like CONCAT('%',#{userName},'%'))
+			</if>
+			<if test="type !=null and type !=''">
+				and l.type=#{type}
+			</if>
+		</where>
+		order by call_time desc ,id desc
+	</select>
+		<select id="queryRpcRunLog" resultMap="resultMapRun">
+		select
+		<include refid="column_list" />,u.username
+		from rpc_log l
+		left join sys_user u on l.create_user=u.uuid , (select @i:=0)t
+		<where>
+			<if test="callTimeFrom != null and callTimeFrom != '' ">
+				and l.call_time &gt;=#{callTimeFrom}
+			</if>
+			<if test="callTimeEnd != null and callTimeEnd != '' ">
+				and l.call_time &lt;= #{callTimeEnd}
+			</if>
+			<if test="module != null and module != '' ">
+				and l.module =#{module}
+			</if>
+			<if test="todo != null and todo != '' ">
+				and l.todo=#{todo}
+			</if>
+			<if test="ip != null and ip != '' ">
+				and l.ip =#{ip}
+			</if>
+			<if test="result != null and result != '' ">
+				and l.result #{result}
+			</if>
+			<if test="errorMsg != null and errorMsg != '' ">
+				and l.error_msg like CONCAT('%',#{errorMsg},'%')
+			</if>
+			<if test="userName !=null and userName !='' ">
+				and l.create_user in (select uuid from sys_user where username like CONCAT('%',#{userName},'%'))
+			</if>
+			<if test="type !=null and type !=''">
+				and l.type=#{type}
+			</if>
+		</where>
+		order by call_time desc ,id desc
+	</select>
+	<select id="getModle" resultMap="resultMap">
+		select substring_index(title, '-', 1) as module,substring_index(title, '-', -1) as todo from sys_resource where type=3
+	</select>
+</mapper>

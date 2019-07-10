@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sensing.core.dao.ISysMessageLogDAO">
+    <resultMap id="BaseResultMap" type="com.sensing.core.bean.message.SysMessageLog">
+        <id column="id" jdbcType="INTEGER" property="id"/>
+        <result column="type" jdbcType="INTEGER" property="type"/>
+        <result column="extend_uuid" jdbcType="VARCHAR" property="extendUuId"/>
+        <result column="user_uuid" jdbcType="VARCHAR" property="userUuid"/>
+        <result column="is_read" jdbcType="INTEGER" property="isRead"/>
+        <result column="is_del" jdbcType="INTEGER" property="isDel"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+    id, `type`, extend_uuid, user_uuid, is_read, is_del, create_time
+    </sql>
+
+    <insert id="insert" parameterType="com.sensing.core.bean.message.SysMessageLog" useGeneratedKeys="true"
+            keyProperty="id">
+        insert into sys_message_log ( id,`type`, extend_uuid,
+          user_uuid, is_read, is_del,
+          create_time)
+        values ( #{id}, #{type,jdbcType=INTEGER}, #{extendUuId,jdbcType=VARCHAR},
+          #{userUuid,jdbcType=VARCHAR}, #{isRead,jdbcType=INTEGER}, #{isDel,jdbcType=INTEGER},
+          #{createTime,jdbcType=TIMESTAMP})
+    </insert>
+
+
+    <update id="setMsgReadByExtendUuId" parameterType="com.sensing.core.bean.message.SysMessageLog">
+        update sys_message_log sml
+        set sml.is_read = 1
+        where sml.extend_uuid = #{extendUuId,jdbcType=VARCHAR}
+        and sml.type = #{type,jdbcType=INTEGER}
+        and sml.user_uuid = #{userUuid,jdbcType=INTEGER}
+    </update>
+
+    <update id="setMsgReadById" parameterType="com.sensing.core.bean.message.SysMessageLog">
+        update sys_message_log sml
+        set sml.is_read = 1
+        where sml.id in
+        <foreach item="item" index="index" collection="ids" open="("
+                 separator="," close=")">
+            #{item}
+        </foreach>
+    </update>
+
+
+    <select id="getUnReadCount" parameterType="com.sensing.core.bean.message.SysMessageLog"
+            resultType="java.util.HashMap">
+        SELECT
+			( SELECT count(*) FROM sys_message_log sml WHERE sml.type = 1 AND sml.user_uuid = #{userUuid} AND sml.is_del = 0 AND sml.is_read = 0 ) AS p1,
+			( SELECT count(*) FROM sys_message_log sml WHERE sml.type = 2 AND sml.user_uuid = #{userUuid} AND sml.is_del = 0 AND sml.is_read = 0 ) AS p2,
+			( SELECT count(*) FROM sys_message_log sml WHERE sml.type = 3 AND sml.user_uuid = #{userUuid} AND sml.is_del = 0 AND sml.is_read = 0 ) AS p3
+    </select>
+
+
+    <select id="getUnReadByExtengIdAndType" resultType="java.lang.String" parameterType="java.util.List">
+        select sml.extend_uuid
+        from sys_message_log sml
+        where sml.extend_uuid in
+        <foreach item="item" index="index" collection="jobsUuids" open="("
+                 separator="," close=")">
+            #{item}
+        </foreach>
+        and sml.is_read = 0
+        and sml.is_del = 0
+        and sml.type = #{type}
+    </select>
+
+    <select id="getUnReadByExtengId" resultMap="BaseResultMap" parameterType="java.util.List">
+        select
+        <include refid="Base_Column_List"/>
+        from sys_message_log sml
+        where sml.extend_uuid in
+        <foreach item="item" index="index" collection="jobsUuids" open="("
+                 separator="," close=")">
+            #{item}
+        </foreach>
+        and sml.is_read = 0
+        and sml.is_del = 0
+    </select>
+
+
+</mapper>

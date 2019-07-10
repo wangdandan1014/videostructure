@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IDataOverviewDAO">
+
+	<!-- 统计告警的数量 -->
+	<select id="alarmCount" resultType="java.util.HashMap">
+		SELECT
+			tab.job_level alarmLevel,
+			COUNT(tab.job_level) alarmCount
+		FROM
+			(
+				SELECT
+					a.uuid,
+					a.job_uuid,
+					a.job_level
+				FROM
+					alarm a
+				WHERE
+					a.alarm_time  &gt;= #{startTime}
+					AND a.alarm_time &lt;= #{endTime}
+					<if test="deviceIds != null  and deviceIds.size() > 0  ">
+						and a.device_id in 
+						<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	          		 		 #{deviceId}
+						</foreach>
+					</if>
+			) tab
+		GROUP BY tab.job_level
+	</select>
+	
+</mapper>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysCarbrandDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.SysCarbrand">
+		<id column="uuid" property="uuid" />
+		<id column="type_code" property="typeCode" />
+		<id column="item_id" property="itemId" />
+		<id column="item_code" property="itemCode" />
+		<id column="item_value" property="itemValue" />
+		<id column="parent_id" property="parentId" />
+		<id column="search_code" property="searchCode" />
+		<id column="memo" property="memo" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,type_code,item_id,item_code,item_value,parent_id,search_code,memo
+	</sql>
+	<insert id="saveSysCarbrand">
+		insert into
+		sys_carbrand(uuid,type_code,item_id,item_code,item_value,parent_id,search_code,memo)
+		values(
+		#{uuid},#{typeCode},#{itemId},#{itemCode},#{itemValue},#{parentId},#{searchCode},#{memo}
+		)
+	</insert>
+	<select id="getSysCarbrand" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_carbrand
+		where uuid = #{uuid}
+	</select>
+	<select id="findSysCarbrand" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_carbrand
+		where item_id = #{itemId} and type_code = #{typeCode}
+	</select>
+	<delete id="removeSysCarbrand">
+		delete from sys_carbrand
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateSysCarbrand">
+		update sys_carbrand set
+		type_code=#{typeCode},item_id=#{itemId},item_code=#{itemCode},item_value=#{itemValue},parent_id=#{parentId},search_code=#{searchCode},memo=#{memo}
+		where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_carbrand
+		<where>
+			<if test="f.typeCode != null and f.typeCode != '' ">
+				and type_code like CONCAT('%',#{f.typeCode},'%')
+			</if>
+			<if test="f.itemId != null and f.itemId != '' ">
+				and item_id =#{f.itemId}
+			</if>
+			<if test="f.itemValue != null and f.itemValue != '' ">
+				and item_value like CONCAT('%',#{f.itemValue},'%')
+			</if>
+			<if test="f.parentId != null and f.parentId != '' ">
+				and parent_id =#{f.parentId}
+			</if>
+		</where>
+		order by item_id asc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from sys_carbrand
+		<where>
+			<if test="f.typeCode != null and f.typeCode != '' ">
+				and type_code like CONCAT('%',#{f.typeCode},'%')
+			</if>
+			<if test="f.itemId != null and f.itemId != '' ">
+				and item_id =#{f.itemId}
+			</if>
+			<if test="f.itemValue != null and f.itemValue != '' ">
+				and item_value like CONCAT('%',#{f.itemValue},'%')
+			</if>
+			<if test="f.parentId != null and f.parentId != '' ">
+				and parent_id =#{f.parentId}
+			</if>
+		</where>
+	</select>
+</mapper>

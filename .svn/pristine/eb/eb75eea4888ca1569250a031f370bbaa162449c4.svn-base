@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ICaptureDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.Capture">
+		<id column="uuid" property="uuid" />
+		<id column="device_id" property="deviceId" />
+		<id column="identity_id" property="identityId" />
+		<id column="cap_type" property="capType" />
+		<id column="cap_time" property="capTime" />
+		<id column="cap_img_url" property="capImgUrl" />
+		<id column="device_area" property="deviceArea" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,device_id,identity_id,cap_type,cap_time,cap_img_url,device_area
+	</sql>
+	<insert id="saveCapture">
+	   insert into capture(uuid,device_id,identity_id,cap_type,cap_time,cap_img_url,device_area)
+	   values(
+		   #{uuid},#{deviceId},#{identityId},#{capType},#{capTime},#{capImgUrl},#{deviceArea}
+	   )
+	</insert>
+	<select id="getCapture" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from capture
+		where id = #{id}
+	</select>
+	<delete id="removeCapture">
+		delete from capture
+		where id = #{id}
+	</delete>
+	<update id="updateCapture">
+	   update capture set device_id=#{deviceId},identity_id=#{identityId},cap_type=#{capType},cap_time=#{capTime},cap_img_url=#{capImgUrl},device_area=#{deviceArea}
+	   where id=#{id}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from capture
+		<where>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(id)
+		from capture
+		<where>
+		</where>
+	</select>
+</mapper>

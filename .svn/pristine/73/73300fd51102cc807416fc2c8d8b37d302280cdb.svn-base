@@ -1,0 +1,140 @@
+package com.sensing.core.service.impl;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Service;
+
+import com.sensing.core.dao.IDataOverviewDAO;
+import com.sensing.core.service.IDataOverviewService;
+import com.sensing.core.service.IJobsChannelService;
+import com.sensing.core.utils.StringUtils;
+
+/**
+ * 
+ * <p>
+ * Title: DataOverviewServiceImpl
+ * </p>
+ * <p>
+ * Description:数据概览实现业务类
+ * </p>
+ * <p>
+ * Company: www.sensingtech.com
+ * </p>
+ * 
+ * @author mingxingyu
+ * @date 2018年12月5日
+ * @version 1.0
+ */
+@Service
+public class DataOverviewServiceImpl implements IDataOverviewService {
+
+	@Resource
+	public IDataOverviewDAO dataOverviewDAO;
+
+	private static final Log log = LogFactory.getLog(IJobsChannelService.class);
+
+	/**
+	 * 根据时间查找告警的数量
+	 */
+	public List<Map<String, Object>> alarmCount(Map<String, Object> sqlParams) throws Exception {
+		return dataOverviewDAO.alarmCount(sqlParams);
+	}
+
+	/**
+	 * 统计时间段范围内每天的告警的数量
+	 * 
+	 * @param params
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date 2018年12月5日 下午1:51:13
+	 */
+	public List<Map<String, Object>> alarmCountByDay(Map<String, Object> params) throws Exception {
+
+		List<Map<String, Object>> resultList = new ArrayList<Map<String, Object>>();
+
+		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
+		SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date startDate = sdf2.parse(params.get("startDate").toString());
+		Date endDate = sdf2.parse(params.get("endDate").toString());
+
+		Date nextDate = sdf1.parse(sdf1.format(startDate));
+		while (nextDate.getTime() <= endDate.getTime()) {
+
+			String currDay = sdf1.format(nextDate);
+
+			Long nextDayStart = (sdf2.parse(currDay + " 00:00:00")).getTime() / 1000;
+			Long nextDayEnd = (sdf2.parse(currDay + " 23:59:59")).getTime() / 1000;
+
+			Map<String, Object> sqlParams = new HashMap<String, Object>();
+			String deviceId = (String) params.get("deviceId");
+			List<String> channels = null;
+			if (StringUtils.isNotEmpty(deviceId)) {
+				channels = Arrays.asList(deviceId.split(",")).stream().map(s -> s.trim()).collect(Collectors.toList());
+			}
+			sqlParams.put("deviceIds", channels);
+			if (nextDayStart < startDate.getTime() / 1000) {
+				sqlParams.put("startTime", startDate.getTime() / 1000);
+			} else {
+				sqlParams.put("startTime", nextDayStart);
+			}
+			if (nextDayEnd > endDate.getTime() / 1000) {
+				sqlParams.put("endTime", endDate.getTime() / 1000);
+			} else {
+				sqlParams.put("endTime", nextDayEnd);
+			}
+			List<Map<String, Object>> sqlResultList = dataOverviewDAO.alarmCount(sqlParams);
+			Map<String, Object> resultMap = new HashMap<String, Object>();
+			int level1Count = 0;
+			int level2Count = 0;
+			int level3Count = 0;
+			if (sqlResultList != null && sqlResultList.size() > 0) {
+				for (int i = 0; i < sqlResultList.size(); i++) {
+					Map<String, Object> map = sqlResultList.get(i);
+					int level = (int) map.get("alarmLevel");
+					int alarmCount = ((Long) map.get("alarmCount")).intValue();
+					if (level == 1) {
+						level1Count = alarmCount;
+					}
+					if (level == 2) {
+						level2Count = alarmCount;
+					}
+					if (level == 3) {
+						level3Count = alarmCount;
+					}
+				}
+				resultMap.put("date", currDay);
+				resultMap.put("level1Count", level1Count);
+				resultMap.put("level2Count", level2Count);
+				resultMap.put("level3Count", level3Count);
+				resultList.add(resultMap);
+			} else {
+				resultMap.put("date", currDay);
+				resultMap.put("level1Count", level1Count);
+				resultMap.put("level2Count", level2Count);
+				resultMap.put("level3Count", level3Count);
+				resultList.add(resultMap);
+
+			}
+
+			Calendar c = Calendar.getInstance();
+			c.setTime(nextDate);
+			c.add(Calendar.DAY_OF_MONTH, 1);
+			nextDate = c.getTime();
+		}
+		return resultList;
+	}
+
+}

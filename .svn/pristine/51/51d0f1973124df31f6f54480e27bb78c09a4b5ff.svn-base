@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.clickhouseDao.IPersonCKDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.Person">
+		<id column="uuid" property="uuid" />
+		<id column="deviceId" property="deviceId" />
+		<id column="capTime" property="capTime" />
+		<id column="capDate" property="capDate" />
+		<id column="capFlag" property="capFlag" />
+		<id column="age" property="age" />
+		<id column="genderCode" property="genderCode" />
+		<id column="bagStyle" property="bagStyle" />
+		<id column="bigBagStyle" property="bigBagStyle" />
+		<id column="orientation" property="orientation" />
+		<id column="motion" property="motion" />
+		<id column="cap" property="cap" />
+		<id column="respirator" property="respirator" />
+		<id column="glass" property="glass" />
+		<id column="coatColor" property="coatColor" />
+		<id column="coatLength" property="coatLength" />
+		<id column="coatTexture" property="coatTexture" />
+		<id column="trousersColor" property="trousersColor" />
+		<id column="trousersLen" property="trousersLen" />
+		<id column="trousersTexture" property="trousersTexture" />
+		<id column="capUrl" property="capUrl" />
+		<id column="seceneUrl" property="seceneUrl" />
+	</resultMap>
+	<sql id="column_list">
+		uuid, deviceId, capTime, capDate, frameTime,capFlag, age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap, glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, capLocation, capUrl, seceneUrl, taskIds
+	</sql>
+	<insert id="savePerson">
+	   insert into Person(uuid, deviceId, capTime, capDate, frameTime, capFlag,age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap, glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, capLocation, capUrl, seceneUrl, taskIds)
+	   values(
+		   #{person.uuid,jdbcType=VARCHAR},#{person.deviceId,jdbcType=VARCHAR},#{person.capTime,jdbcType=BIGINT},#{person.capDate,jdbcType=DATE},#{person.frameTime,jdbcType=BIGINT},#{person.capFlag,jdbcType=INTEGER},#{person.age,jdbcType=INTEGER},#{person.genderCode,jdbcType=INTEGER},#{person.bagStyle,jdbcType=INTEGER},#{person.bigBagStyle,jdbcType=INTEGER},#{person.orientation,jdbcType=INTEGER},#{person.motion,jdbcType=INTEGER},#{person.cap,jdbcType=INTEGER},#{person.glass,jdbcType=INTEGER},#{person.coatColor,jdbcType=INTEGER},#{person.coatLength,jdbcType=INTEGER},#{person.coatTexture,jdbcType=INTEGER},#{person.trousersColor,jdbcType=INTEGER},#{person.trousersLen,jdbcType=INTEGER},#{person.trousersTexture,jdbcType=INTEGER},#{person.respirator,jdbcType=INTEGER},#{person.capLocation,jdbcType=VARCHAR},#{person.capUrl,jdbcType=VARCHAR},#{person.seceneUrl,jdbcType=VARCHAR},#{taskIds}
+	   )
+	</insert>
+	<select id="queryByUuid" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap,
+		 glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, 
+		 capLocation, capUrl, seceneUrl, taskIds from Person where uuid = #{uuid} 
+		<if test="capTime != null and capTime != '' ">
+			and capTime = #{capTime}
+		</if>
+	</select>
+	<select id="queryByUuids" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap, glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, capLocation, capUrl, seceneUrl, taskIds
+		 from Person where uuid in 
+		 <foreach collection="uuids" item="uuid" index="index" open="(" separator="," close=")">
+	            #{uuid}
+		</foreach>
+	</select>
+	<select id="queryList" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap, glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, capLocation, capUrl, seceneUrl, taskIds from Person
+		<where>
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.bagStyle != null  ">
+				and bagStyle =#{pager.m.bagStyle}
+			</if>
+
+			<if test="pager.m.bigBagStyle != null  ">
+				and bigBagStyle =#{pager.m.bigBagStyle}
+			</if>
+
+			<if test="pager.m.orientation != null ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null  ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+
+			<if test="pager.m.trousersColor != null ">
+				and trousersColor =#{pager.m.trousersColor}
+			</if>
+
+			<if test="pager.m.trousersLen != null  ">
+				and trousersLen =#{pager.m.trousersLen}
+			</if>
+
+			<if test="pager.m.trousersTexture != null ">
+				and trousersTexture =#{pager.m.trousersTexture}
+			</if>
+
+			<if test="pager.f.capUrl != null  ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null  ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		</where>
+			order by capTime desc
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>
+	</select>
+	<select id="queryListByTaskId" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap, glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, capLocation, capUrl, seceneUrl, taskIds
+		 from (select  uuid, deviceId, capTime, frameTime,capFlag, age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap, glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, capLocation, capUrl, seceneUrl, taskIds, countEqual(taskIds,#{pager.f.taskId}) as 
+		taskId from Person WHERE taskId =1 
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.bagStyle != null ">
+				and bagStyle =#{pager.m.bagStyle}
+			</if>
+
+			<if test="pager.m.bigBagStyle != null  ">
+				and bigBagStyle =#{pager.m.bigBagStyle}
+			</if>
+
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null  ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+
+			<if test="pager.m.trousersColor != null  ">
+				and trousersColor =#{pager.m.trousersColor}
+			</if>
+
+			<if test="pager.m.trousersLen != null ">
+				and trousersLen =#{pager.m.trousersLen}
+			</if>
+
+			<if test="pager.m.trousersTexture != null  ">
+				and trousersTexture =#{pager.m.trousersTexture}
+			</if>
+
+			<if test="pager.f.capUrl != null ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null  ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		 order by capTime desc 
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>) 
+	</select>
+	<select id="queryOffVideoListByTaskId" resultMap="resultMap">
+		 from (select  uuid, deviceId, capTime, frameTime,capFlag, age, genderCode, bagStyle, bigBagStyle, orientation, motion, cap, glass, coatColor, coatLength, coatTexture, trousersColor, trousersLen, trousersTexture, respirator, capLocation, capUrl, seceneUrl, taskIds, countEqual(taskIds,#{pager.f.taskId}) as 
+		taskId from Person WHERE taskId =1 
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.bagStyle != null ">
+				and bagStyle =#{pager.m.bagStyle}
+			</if>
+
+			<if test="pager.m.bigBagStyle != null  ">
+				and bigBagStyle =#{pager.m.bigBagStyle}
+			</if>
+
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null  ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+
+			<if test="pager.m.trousersColor != null  ">
+				and trousersColor =#{pager.m.trousersColor}
+			</if>
+
+			<if test="pager.m.trousersLen != null ">
+				and trousersLen =#{pager.m.trousersLen}
+			</if>
+
+			<if test="pager.m.trousersTexture != null  ">
+				and trousersTexture =#{pager.m.trousersTexture}
+			</if>
+
+			<if test="pager.f.capUrl != null ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null  ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		 order by frameTime asc 
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>) 
+	</select>
+	<select id="selectCountByTaskId" resultType="int">
+	select count( 1) from (select  countEqual(taskIds,#{pager.f.taskId}) as taskId from Person 
+	WHERE taskId =1  
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.bagStyle != null  ">
+				and bagStyle =#{pager.m.bagStyle}
+			</if>
+
+			<if test="pager.m.bigBagStyle != null  ">
+				and bigBagStyle =#{pager.m.bigBagStyle}
+			</if>
+
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null  ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null  ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+
+			<if test="pager.m.trousersColor != null  ">
+				and trousersColor =#{pager.m.trousersColor}
+			</if>
+
+			<if test="pager.m.trousersLen != null  ">
+				and trousersLen =#{pager.m.trousersLen}
+			</if>
+
+			<if test="pager.m.trousersTexture != null  ">
+				and trousersTexture =#{pager.m.trousersTexture}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		)
+	</select>
+	<select id="selectCount" resultType="int">
+		select count(1) from Person
+		<where>
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.bagStyle != null ">
+				and bagStyle =#{pager.m.bagStyle}
+			</if>
+
+			<if test="pager.m.bigBagStyle != null ">
+				and bigBagStyle =#{pager.m.bigBagStyle}
+			</if>
+
+			<if test="pager.m.orientation != null ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null  ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+
+			<if test="pager.m.trousersColor != null  ">
+				and trousersColor =#{pager.m.trousersColor}
+			</if>
+
+			<if test="pager.m.trousersLen != null  ">
+				and trousersLen =#{pager.m.trousersLen}
+			</if>
+
+			<if test="pager.m.trousersTexture != null  ">
+				and trousersTexture =#{pager.m.trousersTexture}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		</where>
+	</select>
+
+</mapper>

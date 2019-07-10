@@ -1,0 +1,149 @@
+package com.sensing.core.service.impl;
+
+import java.awt.image.BufferedImage;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.imageio.ImageIO;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Service;
+
+import com.sensing.core.bean.Channel;
+import com.sensing.core.bean.MotorVehicle;
+import com.sensing.core.dao.IChannelDAO;
+import com.sensing.core.dao.IMotorVehicleDAO;
+import com.sensing.core.service.ICapAttrConvertService;
+import com.sensing.core.service.IMotorVehicleService;
+import com.sensing.core.utils.Exception.BussinessException;
+import com.sensing.core.utils.BeanUtil;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.Pager;
+import com.sensing.core.utils.UuidUtil;
+
+/**
+ * @author wenbo
+ */
+@Service
+public class MotorVehicleServiceImpl implements IMotorVehicleService {
+
+	private static final Log log = LogFactory.getLog(IMotorVehicleService.class);
+
+	@Resource
+	public IMotorVehicleDAO motorVehicleDAO;
+	@Resource
+	public IChannelDAO channelDAO;
+	@Resource
+	public ICapAttrConvertService capAttrConvertService;
+
+	public MotorVehicleServiceImpl() {
+		super();
+	}
+
+	@Override
+	public MotorVehicle saveNewMotorVehicle(MotorVehicle MotorVehicle) throws Exception {
+		try {
+			String uuid = UuidUtil.getUuid();
+			MotorVehicle.setUuid(uuid);
+			motorVehicleDAO.saveMotorVehicle(MotorVehicle);
+		} catch (Exception e) {
+			log.error(e);
+			throw new BussinessException(e);
+		}
+		return MotorVehicle;
+	}
+
+	@Override
+	public MotorVehicle updateMotorVehicle(MotorVehicle MotorVehicle) throws Exception {
+		motorVehicleDAO.updateMotorVehicle(MotorVehicle);
+		return MotorVehicle;
+	}
+
+	@Override
+	public MotorVehicle findMotorVehicleById(java.lang.String uuid) throws Exception {
+		try {
+			return motorVehicleDAO.getMotorVehicle(uuid);
+		} catch (Exception e) {
+			log.error(e);
+			throw new BussinessException(e);
+		}
+	}
+
+	@Override
+	public void removeMotorVehicle(String uuid) throws Exception {
+		try {
+			motorVehicleDAO.removeMotorVehicle(uuid);
+		} catch (Exception e) {
+			log.error(e);
+			throw new BussinessException(e);
+		}
+	}
+
+	@Override
+	public Pager queryPage(Pager pager) throws Exception {
+		try {
+			List<MotorVehicle> list = motorVehicleDAO.queryList(pager);
+			int totalCount = motorVehicleDAO.selectCount(pager);
+			pager.setTotalCount(totalCount);
+			pager.setResultList(list);
+		} catch (Exception e) {
+			log.error(e);
+			throw new BussinessException(e);
+		}
+		return pager;
+	}
+
+	@Override
+	public Map<String, Object> queryCapByUuid(String uuid, Integer capType) {
+		Map<String, Object> param = new HashMap<String, Object>();
+		List<Object> list = new ArrayList<>();
+		switch (capType) {
+		case 3:
+			try {
+				MotorVehicle mv = motorVehicleDAO.getMotorVehicle(uuid);
+				Channel channel = null;
+				if (mv != null) {
+					mv = capAttrConvertService.motorVehicleConvert(mv);
+					//文件服务器的地址替换
+					mv.setCapUrl(mv.getCapUrl().replaceAll(Constants.PHOTO_URL_TEMP,Constants.PHOTO_URL_PERSIST));
+					mv.setSeceneUrl(mv.getSeceneUrl().replaceAll(Constants.PHOTO_URL_TEMP,Constants.PHOTO_URL_PERSIST));
+					list.add(mv);
+					List<Channel> channels = channelDAO.getChannelByIds(mv.getDeviceId());
+					if (channels != null && channels.size() > 0) {
+						channel = channels.get(0);
+					}
+				}
+				if (list != null && list.size() >= 1) {
+					Map<String, Object> map = BeanUtil.transBean2Map(list.get(0));
+					Object sceneUrlObj = map.get("seceneUrl");
+					if (sceneUrlObj != null && StringUtils.isNotEmpty(sceneUrlObj.toString())) {
+						String sceneUrl = sceneUrlObj.toString();
+						BufferedImage sceneImg = ImageIO.read(new URL(sceneUrl));
+						if (sceneImg != null) {
+							map.put("sceneWidth", sceneImg.getWidth());
+							map.put("sceneHeight", sceneImg.getHeight());
+						}
+					}
+					param.put("model", map);
+					param.put("channel", channel);
+					return param;
+				} else {
+					return null;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			break;
+		default:
+			break;
+		}
+		return null;
+	}
+
+}

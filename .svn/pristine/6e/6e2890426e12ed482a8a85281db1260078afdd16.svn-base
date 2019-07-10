@@ -1,0 +1,118 @@
+package com.sensing.core.utils.task;
+
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * 结构化任务运行的周几数的测试类
+ * 目前项目是存在该问题的，但是暂未修改。以备周几运行的时候出了问题，通道该类解决
+ * <p>Title: WeekRunTest</p>
+ * <p>Description:</p>
+ * <p>Company: www.sensingtech.com</p> 
+ * @author	mingxingyu
+ * @date	2019年6月24日
+ * @version 1.0
+ */
+public class WeekRunTest {
+
+	static SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
+	static SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	static SimpleDateFormat sdf3 = new SimpleDateFormat("HH:mm:ss");
+	
+	public static void main(String[] args) throws Exception {
+		String runWeeks = "1,2,3,4,5,6,7";
+		String beginDate = "2019-06-24";
+		String endDate = "2019-06-26";
+		String beginTime = "06:00:00";
+		String endTime = "09:00:00";
+
+		List<String> list = Arrays.asList(runWeeks.split(","));
+		
+		Date date = sdf2.parse("2019-06-24 14:17:00");
+		//当前日期是周几，获取到下一个任务需要执行的周几数
+		int weekDay = getWeek(date);
+		//下个周几是任务执行
+		int nextWeekDay = 0;
+		//是否是下周执行
+		int nextWeekStatus = 0;
+		
+		//找到本周的下一天，或者是第二周的第一天
+		for (int i = 0; i < list.size() ; i++) {
+			if ( list.get(i).equals(weekDay) ) {
+				if ( i == list.size() - 1 ) {
+					nextWeekDay = Integer.parseInt(list.get(0));
+					nextWeekStatus = 1;
+				}else{
+					nextWeekDay = i+1;
+				}
+				break;
+			}
+			if ( Integer.parseInt(list.get(i)) > weekDay ) {
+				nextWeekDay = Integer.parseInt(list.get(i));
+				break;
+			}
+			
+		}
+		//不存在，就是下一周的第一天
+		if ( nextWeekDay == 0 ) {
+			nextWeekDay = Integer.parseInt(list.get(0));
+			nextWeekStatus = 1;
+		}
+		//根据周几获取到下一天执行的日期
+		Date dateByWeek = getDateByWeek(date,nextWeekDay,nextWeekStatus);
+		
+		Date end = sdf2.parse(endDate+" "+endTime);
+		
+		//判断下一天执行的日期是否是大于结束日期
+		// 是：已完成；不是：休息中
+		if ( end.getTime() > sdf1.parse(sdf1.format(dateByWeek)).getTime() ) {
+			System.out.println("休息中");
+		}else{
+			System.out.println("已完成");
+		}
+		
+	}
+	
+	/**
+	 * 获取日期（2019-06-24 10:00:00 该日期本周还是下周的周几的日期）
+	 * @param date 日期
+	 * @param week	周几（中国习惯）
+	 * @param weekStatus	本周是0，下周是1,
+	 * @author mingxingyu
+	 * @date   2019年6月24日 上午10:14:32
+	 */
+	public static Date getDateByWeek(Date date,int week,int weekStatus){
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		
+        int w = cal.get(Calendar.DAY_OF_WEEK) - 1;
+        if (w == 0)
+            w = 7;
+        
+        cal.add(Calendar.DAY_OF_YEAR,week-w+weekStatus*7);
+        String format = sdf2.format(cal.getTime());
+        System.out.println(format);
+        return cal.getTime();
+	}
+	
+	/**
+	 * 获取参数时间date是周几
+	 * @param date 日期
+	 * @param week	周几（中国习惯）
+	 * @param weekStatus	本周是0，下周是1,
+	 * @author mingxingyu
+	 * @date   2019年6月24日 上午10:14:32
+	 */
+	public static int getWeek(Date date){
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+        int w = cal.get(Calendar.DAY_OF_WEEK) - 1;
+        if (w == 0)
+            w = 7;
+        return w;
+	}
+	
+}

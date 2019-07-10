@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IDataInitDAO">
+
+	<!-- 通道和任务的关联信息 -->
+	<select id="queryChannelJobMap" resultType="java.util.HashMap">
+		SELECT
+			jc.channel_uuid deviceUuid,
+			group_concat(jc.job_uuid) AS jobUuids
+		FROM
+			jobs_channel jc,
+			jobs j
+		WHERE
+			jc.job_uuid = j.uuid
+		AND j.state = 20
+		AND j.is_deleted = 0
+		GROUP BY jc.channel_uuid
+	</select>
+	
+	<!-- 任务和模板库的关联关系 -->
+	<select id="queryJobTemplateDbMap" resultType="java.util.HashMap">
+		SELECT
+			jt.job_uuid AS jobUuid,
+			GROUP_CONCAT(jt.templatedb_id) templateDbIds
+		FROM
+			jobs_templatedb jt,
+			jobs j,
+			template_db t
+		WHERE
+			jt.templatedb_id = t.id
+		AND jt.job_uuid = j.uuid
+		AND j.state = 20 
+		AND t.is_used = 1
+		AND t.is_deleted = 0
+		AND j.is_deleted = 0
+		GROUP BY
+			jt.job_uuid
+	</select>	
+
+	<!-- 布控任务对象 -->	
+	<resultMap id="resultMapJob" type="com.sensing.core.alarm.JobBean">
+		<id column="uuid" property="uuid" />
+		<id column="state" property="state" />
+		<id column="beginTime" property="beginTime" />
+		<id column="endTime" property="endTime" />
+		<id column="beginDate" property="beginDate" />
+		<id column="endDate" property="endDate" />
+		<id column="score" property="score" />
+		<id column="runWeek" property="runWeek" />
+		<id column="objUuid" property="objUuid" />
+		<id column="jobLevel" property="jobLevel" />
+	</resultMap>
+	
+	<!-- 任务缓存 -->
+	<select id="queryJobMap" resultMap="resultMapJob">
+		SELECT
+			j.uuid uuid,
+			j.name name,
+			j.state state,
+			j.begin_time beginTime,
+			j.end_time endTime,
+			j.begin_date beginDate,
+			j.end_date endDate,
+			j.score score,
+			j.run_week runWeek,
+			j.level jobLevel,
+			j.alarm_sound alarmSound,
+			(SELECT jt.obj_uuid from jobs_templatedb jt where jt.job_uuid = j.uuid and jt.templatedb_id = 1) as objUuid
+		FROM  
+			jobs j
+		WHERE
+			<!-- 布控中的状态是20 -->
+			j.state = 20
+            AND j.is_deleted = 0
+	</select>
+	
+	<!-- 可用模板库的集合 -->
+	<select id="queryTemplateDbList" resultType="java.util.HashMap" >
+		SELECT DISTINCT
+			db.id id
+		FROM
+			template_db db,
+			jobs_templatedb jt
+		WHERE
+			jt.templatedb_id = db.id
+		AND db.is_deleted = 0
+		AND db.is_used = 1;
+	</select>
+		
+	<!-- 通道对象 -->
+	<resultMap id="resultMapDevice" type="com.sensing.core.alarm.DeviceBean">
+		<id column="uuid" property="uuid" />
+		<id column="deviceName" property="deviceName" />
+		<id column="deviceArea" property="deviceArea" />
+	</resultMap>
+	
+	<select id="queryChannel" resultMap="resultMapDevice">
+		SELECT 
+			c.uuid as uuid ,
+			c.channel_name deviceName,
+			c.channel_area deviceArea
+		from 
+			channel c 
+		where c.is_del = 0;
+	</select>
+	
+</mapper>

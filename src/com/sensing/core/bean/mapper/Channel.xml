@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IChannelDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.Channel">
+		<id column="uuid" property="uuid" />
+		<id column="channel_name" property="channelName" />
+		<id column="channel_description" property="channelDescription" />
+		<id column="channel_type" property="channelType" />
+		<id column="channel_addr" property="channelAddr" />
+		<id column="channel_port" property="channelPort" />
+		<id column="channel_uid" property="channelUid" />
+		<id column="channel_psw" property="channelPsw" />
+		<id column="channel_no" property="channelNo" />
+		<id column="channel_guid" property="channelGuid" />
+		<id column="min_face_width" property="minFaceWidth" />
+		<id column="min_img_quality" property="minImgQuality" />
+		<id column="min_cap_distance" property="minCapDistance" />
+		<id column="max_save_distance" property="maxSaveDistance" />
+		<id column="max_yaw" property="maxYaw" />
+		<id column="max_roll" property="maxRoll" />
+		<id column="max_pitch" property="maxPitch" />
+		<id column="channel_longitude" property="channelLongitude" />
+		<id column="channel_latitude" property="channelLatitude" />
+		<id column="channel_area" property="channelArea" />
+		<id column="channel_direct" property="channelDirect" />
+		<id column="channel_threshold" property="channelThreshold" />
+		<id column="cap_stat" property="capStat" />
+		<id column="is_del" property="isDel" />
+		<id column="last_timestamp" property="lastTimestamp" />
+		<id column="region_id" property="regionId" />
+		<id column="reserved" property="reserved" />
+		<id column="sdk_ver" property="sdkVer" />
+		<id column="important" property="important" />
+		<id column="channel_verid" property="channelVerid" />
+		<id column="region_name" property="regionName" />
+		<id column="search_code" property="searchCode" />
+		<id column="org_id" property="orgId" />
+		<id column="org_id1" property="orgId1" />
+		<id column="org_id2" property="orgId2" />
+		<id column="org_id3" property="orgId3" />
+		<id column="org_id4" property="orgId4" />
+		<id column="org_id5" property="orgId5" />
+		<id column="create_user" property="createUser" />
+		<id column="username" property="createUserName" />
+		<id column="channel_rtmp" property="channelRtmp" />
+		<id column="org_name" property="orgName" />
+		<id column="create_time" property="createTime" />
+		<id column="sipnet_type" property="sipNetType" />
+		<id column="preview_addr" property="previewAddr" />
+		<id column="analysis_type" property="analysisType" />
+
+	</resultMap>
+	<sql id="column_list">
+		uuid,channel_name,channel_description,channel_type,channel_addr,channel_port,channel_uid,channel_psw,channel_no,channel_guid,min_face_width,min_img_quality,min_cap_distance,max_save_distance,max_yaw,max_roll,max_pitch,channel_longitude,channel_latitude,channel_area,channel_direct,channel_threshold,cap_stat,is_del,last_timestamp,region_id,reserved,sdk_ver,important,channel_verid,search_code,sipnet_type,org_id,org_id1,org_id2,org_id3,org_id4,org_id5,create_user,channel_rtmp,analysis_type
+	</sql>
+	<sql id="column_list_user">
+		c.uuid,c.channel_name,c.channel_description,c.channel_type,c.channel_addr,c.channel_port,c.channel_uid,c.channel_psw,c.channel_no,c.channel_guid,c.min_face_width,c.min_img_quality,c.min_cap_distance,c.max_save_distance,c.max_yaw,c.max_roll,c.max_pitch,c.channel_longitude,c.channel_latitude,c.channel_area,c.channel_direct,c.channel_threshold,c.cap_stat,c.is_del,c.last_timestamp,c.region_id,c.reserved,c.sdk_ver,c.important,c.channel_verid,c.search_code,c.sipnet_type,c.org_id,c.org_id1,c.org_id2,c.org_id3,c.org_id4,c.org_id5,c.create_user,username,c.channel_rtmp,c.preview_addr,c.analysis_type
+	</sql>
+	<sql id="colum_list_alis">
+		c.uuid,c.channel_name,c.channel_description,c.channel_type,c.channel_addr,c.channel_port,c.channel_uid,c.channel_psw,c.channel_no,c.channel_guid,c.min_face_width,c.sipnet_type,
+		c.min_img_quality,c.min_cap_distance,c.max_save_distance,c.max_yaw,max_roll,c.max_pitch,c.channel_longitude,c.channel_latitude,c.channel_area,c.channel_direct,c.channel_threshold,c.cap_stat,c.is_del,c.last_timestamp,c.region_id,c.reserved,c.sdk_ver,c.important,c.channel_verid,c.search_code,c.channel_rtmp,c.create_time
+	</sql>
+	<insert id="saveChannel">
+		insert into
+		channel(uuid,channel_name,channel_description,channel_type,channel_addr,channel_port,channel_uid,channel_psw,channel_no,channel_guid,min_face_width,min_img_quality,min_cap_distance,max_save_distance,max_yaw,max_roll,max_pitch,channel_longitude,channel_latitude,channel_area,channel_direct,channel_threshold,cap_stat,is_del,last_timestamp,region_id,reserved,sdk_ver,important,channel_verid,search_code,sipnet_type,is_private,org_id,org_id1,org_id2,org_id3,org_id4,org_id5,create_user,create_time,channel_rtmp,preview_addr)
+		values(
+		#{uuid},#{channelName},#{channelDescription},#{channelType},#{channelAddr},#{channelPort},#{channelUid},#{channelPsw},#{channelNo},#{channelGuid},#{minFaceWidth},#{minImgQuality},#{minCapDistance},#{maxSaveDistance},#{maxYaw},#{maxRoll},#{maxPitch},#{channelLongitude},#{channelLatitude},#{channelArea},#{channelDirect},#{channelThreshold},#{capStat},#{isDel},#{lastTimestamp},#{regionId},#{reserved},#{sdkVer},#{important},#{channelVerid},#{searchCode},#{sipNetType},#{isPrivate},#{orgId},#{orgId1},#{orgId2},#{orgId3},#{orgId4},#{orgId5},#{createUser},#{createTime},#{channelRtmp},#{previewAddr}
+		)
+	</insert>
+	<select id="getChannel" resultMap="resultMap">
+		select
+		<include refid="column_list_user" />
+		from channel c left join sys_user on c.create_user = sys_user.uuid
+		where c.uuid = #{uuid} and c.is_del = #{isDel}
+	</select>
+	<select id="getChannelAll" resultMap="resultMap">
+		select
+		<include refid="column_list_user" />
+		from channel c left join sys_user on c.create_user = sys_user.uuid
+		where c.uuid = #{uuid}
+	</select>
+
+	<update id="removeChannel">
+		update channel set is_del =
+		#{isDel},cap_stat=#{capStat},modify_user=#{modifyUser},modify_time=#{modifyTime}
+		where uuid = #{uuid}
+	</update>
+	<update id="updateChannel">
+		update channel set
+		channel_name=#{channelName},
+		channel_description=#{channelDescription},
+		channel_type=#{channelType},
+		channel_addr=#{channelAddr},
+		channel_port=#{channelPort},
+		channel_uid=#{channelUid},
+		channel_psw=#{channelPsw},
+		channel_no=#{channelNo},
+		channel_guid=#{channelGuid},
+		min_face_width=#{minFaceWidth},
+		min_img_quality=#{minImgQuality},
+		min_cap_distance=#{minCapDistance},
+		max_save_distance=#{maxSaveDistance},
+		max_yaw=#{maxYaw},
+		max_roll=#{maxRoll},
+		max_pitch=#{maxPitch},
+		channel_longitude=#{channelLongitude},
+		channel_latitude=#{channelLatitude},
+		channel_area=#{channelArea},
+		channel_direct=#{channelDirect},
+		channel_threshold=#{channelThreshold},
+		channel_rtmp=#{channelRtmp},
+		cap_stat=#{capStat},
+		is_del=#{isDel},
+		last_timestamp=#{lastTimestamp},
+		region_id=#{regionId},
+		reserved=#{reserved},
+		sdk_ver=#{sdkVer},
+		important=#{important},
+		channel_verid=#{channelVerid},
+		sipnet_type=#{sipNetType},
+		is_private=#{isPrivate},
+		modify_user=#{modifyUser},
+		modify_time=#{modifyTime},
+		preview_addr=#{previewAddr},
+		<!-- <if test=" capStat !=null and capStat == 0 "> analysis_type = null, 
+			</if> <if test=" capStat !=null and capStat == 1 "> -->
+		analysis_type =#{analysisType},
+		<!-- </if> -->
+		org_id=#{orgId},org_id1=#{orgId1},org_id2=#{orgId2},org_id3=#{orgId3},org_id4=#{orgId4},org_id5=#{orgId5}
+		where uuid=#{uuid}
+	</update>
+	<!-- <update id="updateChannel"> -->
+	<!-- update channel set -->
+	<!-- <if test="channelName != null"> -->
+	<!-- channel_name=#{channelName}, -->
+	<!-- </if> -->
+	<!-- <if test="channelDescription != null"> -->
+	<!-- channel_description=#{channelDescription}, -->
+	<!-- </if> -->
+	<!-- <if test="channelType !=null"> -->
+	<!-- channel_type=#{channelType}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelAddr!=null "> -->
+	<!-- channel_addr=#{channelAddr}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelPort!=null "> -->
+	<!-- channel_port=#{channelPort}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelUid!=null "> -->
+	<!-- channel_uid=#{channelUid}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelPsw != null "> -->
+	<!-- channel_psw=#{channelPsw}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelNo != null "> -->
+	<!-- channel_no=#{channelNo}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelGuid !=null "> -->
+	<!-- channel_guid=#{channelGuid}, -->
+	<!-- </if> -->
+	<!-- <if test=" minFaceWidth!=null "> -->
+	<!-- min_face_width=#{minFaceWidth}, -->
+	<!-- </if> -->
+	<!-- <if test=" minImgQuality!= null "> -->
+	<!-- min_img_quality=#{minImgQuality}, -->
+	<!-- </if> -->
+	<!-- <if test=" minCapDistance !=null "> -->
+	<!-- min_cap_distance=#{minCapDistance}, -->
+	<!-- </if> -->
+	<!-- <if test=" maxSaveDistance !=null "> -->
+	<!-- max_save_distance=#{maxSaveDistance}, -->
+	<!-- </if> -->
+	<!-- <if test=" maxYaw !=null "> -->
+	<!-- max_yaw=#{maxYaw}, -->
+	<!-- </if> -->
+	<!-- <if test=" maxRoll !=null "> -->
+	<!-- max_roll=#{maxRoll}, -->
+	<!-- </if> -->
+	<!-- <if test=" maxPitch !=null "> -->
+	<!-- max_pitch=#{maxPitch}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelLongitude !=null "> -->
+	<!-- channel_longitude=#{channelLongitude}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelLatitude!=null "> -->
+	<!-- channel_latitude=#{channelLatitude}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelArea !=null "> -->
+	<!-- channel_area=#{channelArea}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelDirect !=null "> -->
+	<!-- channel_direct=#{channelDirect}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelThreshold !=null "> -->
+	<!-- channel_threshold=#{channelThreshold}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelRtmp !=null "> -->
+	<!-- channel_rtmp=#{channelRtmp}, -->
+	<!-- </if> -->
+	<!-- <if test="capStat != null"> -->
+	<!-- cap_stat=#{capStat}, -->
+	<!-- </if> -->
+	<!-- <if test=" isDel!=null "> -->
+	<!-- is_del=#{isDel}, -->
+	<!-- </if> -->
+	<!-- <if test=" lastTimestamp!=null "> -->
+	<!-- last_timestamp=#{lastTimestamp}, -->
+	<!-- </if> -->
+	<!-- <if test=" regionId!=null "> -->
+	<!-- region_id=#{regionId}, -->
+	<!-- </if> -->
+	<!-- <if test=" reserved !=null "> -->
+	<!-- reserved=#{reserved}, -->
+	<!-- </if> -->
+	<!-- <if test=" sdkVer!=null "> -->
+	<!-- sdk_ver=#{sdkVer}, -->
+	<!-- </if> -->
+	<!-- <if test=" important!=null "> -->
+	<!-- important=#{important}, -->
+	<!-- </if> -->
+	<!-- <if test=" channelVerid !=null "> -->
+	<!-- channel_verid=#{channelVerid}, -->
+	<!-- </if> -->
+	<!-- <if test=" sipNetType !=null"> -->
+	<!-- sipnet_type=#{sipNetType}, -->
+	<!-- </if> -->
+	<!-- <if test=" isPrivate !=null "> -->
+	<!-- is_private=#{isPrivate}, -->
+	<!-- </if> -->
+	<!-- <if test=" modifyUser !=null and modifyUser !='' "> -->
+	<!-- modify_user=#{modifyUser}, -->
+	<!-- </if> -->
+	<!-- <if test=" modifyTime !=null and modifyTime !='' "> -->
+	<!-- modify_time=#{modifyTime}, -->
+	<!-- </if> -->
+	<!-- <if test=" previewAddr !=null and previewAddr !='' "> -->
+	<!-- preview_addr=#{previewAddr}, -->
+	<!-- </if> -->
+	<!-- org_id=#{orgId}, -->
+	<!-- org_id1=#{orgId1},org_id2=#{orgId2},org_id3=#{orgId3},org_id4=#{orgId4},org_id5=#{orgId5} -->
+	<!-- where uuid=#{uuid} -->
+	<!-- </update> -->
+
+	<update id="updateChannelCap">
+		update channel set
+		modify_time=now(),
+		cap_stat=#{capStat},
+		<if test=" capStat !=null and capStat == 0 ">
+			analysis_type = null
+		</if>
+		<if test=" capStat !=null and capStat == 1 ">
+			analysis_type =#{analysisType}
+		</if>
+		where uuid =#{uuid}
+	</update>
+	<update id="initChannelState">
+		update channel
+		set modify_time=now(),
+		cap_stat=0,
+		analysis_type = null
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="colum_list_alis" />
+		,r.region_name
+		from channel c left join regions r on c.region_id=r.id
+		<where>
+			<if test="f.isDel != null and f.isDel != '' ">
+				and is_del = #{f.isDel}
+			</if>
+			<if test="f.channelName != null and f.channelName != '' ">
+				and LOCATE( CONCAT(#{f.channelName}),c.channel_name)>0
+			</if>
+			<if
+				test="f.regionId != null and f.regionId != '' and f.regionId != 1 ">
+				and c.region_id = #{f.regionId}
+			</if>
+		</where>
+		order by c.create_time desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="queryListNew" resultMap="resultMap">
+		select
+		<include refid="colum_list_alis" />
+		,r.region_name
+		from channel c left join regions r on c.region_id=r.id
+		<where>
+			<if test="resultList != null and resultList.size > 0 ">
+			and c.region_id in
+				<foreach item="item" index="index" collection="resultList"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="f.isDel != null and f.isDel != '' ">
+				and is_del = #{f.isDel}
+			</if>
+			<if test="f.capStat != null and f.capStat != '' and f.capStat != 3 ">
+				and cap_stat = #{f.capStat}
+			</if>
+			<if test="f.channelName != null and f.channelName != '' ">
+				and LOCATE( CONCAT(#{f.channelName}),c.channel_name)>0
+			</if>
+		</where>
+		order by c.create_time desc, c.uuid desc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<!-- 查询全通道信息 -->
+	<select id="selectChannelList" resultMap="resultMap">
+		select
+		<include refid="column_list_user" />
+		from channel c left join sys_user on c.create_user = sys_user.uuid
+	</select>
+	<select id="selectAllChannelList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from channel c where c.is_del != 1
+	</select>
+
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from channel
+		<where>
+			<if test="f.channelName != null and f.channelName != '' ">
+				and LOCATE( CONCAT(#{f.channelName}),channel_name)>0
+			</if>
+			<if test="f.isDel != null">
+				and is_del = #{f.isDel}
+			</if>
+			<if test="f.regionIds != null and f.regionIds != '' ">
+				and c.region_id in (#{f.regionIds})
+			</if>
+			<if test="f.capStat != null and f.capStat != '' ">
+				and cap_stat = #{f.capStat}
+			</if>
+		</where>
+	</select>
+	<select id="selectCountNew" resultType="int">
+		select
+		count(uuid)
+		from channel
+		<where>
+			<if test="resultList != null and resultList.size > 0 ">
+			and region_id in
+				<foreach item="item" index="index" collection="resultList"
+					open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="f.channelName != null and f.channelName != '' ">
+				and LOCATE( CONCAT(#{f.channelName}),channel_name)>0
+			</if>
+
+			<if test="f.isDel != null and f.isDel != '' ">
+				and is_del = #{f.isDel}
+			</if>
+			<if test="f.capStat != null and f.capStat != '' and f.capStat != 3 ">
+				and cap_stat = #{f.capStat}
+			</if>
+		</where>
+	</select>
+	<select id="queryMaxSearchCodeByCode" resultType="String">
+		select
+		search_code from channel where search_code like
+		CONCAT(#{searchCode},'%') order by search_code desc limit 1
+	</select>
+
+	<select id="queryChannelByChannelNoAndAddr"
+		resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from channel where channel_no = #{channelNo} and is_del = #{isDel}
+		<if test="channelAddr != null and channelAddr != '' ">
+			and channel_addr = #{channelAddr}
+		</if>
+	</select>
+
+	<select id="queryChannelByChannelNameAndRegionId"
+		resultMap="resultMap">
+		select
+		<include refid="column_list_user" />
+		from channel c left join sys_user on c.create_user = sys_user.uuid
+		where c.channel_name = #{channelName} and c.region_id=#{regionId} and
+		c.is_del = #{isDel}
+	</select>
+
+	<select id="getOneChannelByUuid" resultMap="resultMap">
+		SELECT
+		<include refid="column_list_user" />
+		,r.region_name as region_name
+		FROM
+		channel c left join sys_user on
+		c.create_user = sys_user.uuid
+		LEFT join regions r on c.region_id=r.id
+		WHERE
+		c.uuid = #{0}
+		AND c.is_del = #{1};
+
+	</select>
+
+	<select id="queryChannelListByRegionSearchCode"
+		resultType="String">
+		select uuid from channel where search_code like
+		CONCAT(#{regionSearchCode},'%') and is_del=0
+	</select>
+	<select id="getChannelByIds" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from channel
+		where uuid in
+		<foreach collection="ids" item="id" open="(" close=")"
+			separator=",">
+			#{id}
+		</foreach>
+	</select>
+	<select id="queryVideoByChannelName" resultType="int">
+		select count(*)
+		from channel c
+		inner join task_channel tc on tc.channel_uuid=c.uuid
+		where
+		c.reserved=9 and c.is_del=1 and c.channel_name=#{name}
+	</select>
+
+	<select id="getChannelByUuIds" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from channel
+		where uuid in
+		<foreach collection="list" item="id" open="(" close=")"
+			separator=",">
+			#{id}
+		</foreach>
+
+	</select>
+	<select id="queryChannelListUnderRegionByRegionId" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from channel where region_id=#{regionId} and is_del = 0
+	</select>
+	
+	<!-- 根据任务查询关联的通道信息 -->
+	<select id="queryByTaskUuid" resultMap="resultMap">
+		SELECT 
+			<include refid="colum_list_alis"/>
+		from 
+			channel c,
+			task_channel tc
+		WHERE
+			c.uuid = tc.channel_uuid
+			<if test="f.isDel != null and f.isDel != ''">
+				and c.is_del = #{f.isDel}
+			</if>
+			<if test="f.reserved != null and f.reserved != ''">
+				and c.reserved = #{f.reserved}
+			</if>
+			<if test="f.taskUuid != null and f.taskUuid != ''">
+			  	and tc.task_uuid = #{f.taskUuid}
+			</if>
+	</select>
+</mapper>

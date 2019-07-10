@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IJobsCapDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.JobsCap">
+		<id column="uuid" property="uuid" />
+		<id column="jobs_uuid" property="jobsUuid" />
+		<id column="cap_type" property="capType" />
+		<id column="cap_uuid" property="capUuid" />
+		<id column="rect_x" property="rectX" />
+		<id column="rect_y" property="rectY" />
+		<id column="rect_cx" property="rectCx" />
+		<id column="rect_cy" property="rectCy" />
+		<id column="secene_url" property="seceneUrl" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,jobs_uuid,cap_type,cap_uuid,rect_x,rect_y,rect_cx,rect_cy,secene_url
+	</sql>
+
+	<insert id="saveJobsCapBetch">
+	   insert into jobs_cap(uuid,jobs_uuid,cap_type,cap_uuid,rect_x,rect_y,rect_cx,rect_cy,secene_url)
+	   values(
+		   #{uuid},#{jobsUuid},#{capType},#{capUuid},#{rectX},#{rectY},#{rectCx},#{rectCy},#{seceneUrl}
+	   )
+	</insert>
+	<select id="getJobsCap" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from jobs_cap
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeJobsCap">
+		delete from jobs_cap
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateJobsCap">
+	   update jobs_cap set jobs_uuid=#{jobsUuid},cap_type=#{capType},cap_uuid=#{capUuid},rect_x=#{rectX},rect_y=#{rectY},rect_cx=#{rectCx},rect_cy=#{rectCy},secene_url=#{seceneUrl}
+	   where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from jobs_cap
+		<where>
+			<if test="f.jobsUuid != null and f.jobsUuid != '' ">
+				and jobs_uuid like CONCAT('%',#{f.jobsUuid},'%')
+			</if>
+			<if test="f.capTypeFrom != null and f.capTypeFrom != '' ">
+				and cap_type &gt;=#{f.capTypeFrom}
+			</if>
+			<if test="f.capTypeEnd != null and f.capTypeEnd != '' ">
+				and cap_type &lt;= #{f.capTypeEnd}
+			</if>
+			<if test="f.capUuid != null and f.capUuid != '' ">
+				and cap_uuid like CONCAT('%',#{f.capUuid},'%')
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from jobs_cap
+		<where>
+			<if test="f.jobsUuid != null and f.jobsUuid != '' ">
+				and jobs_uuid like CONCAT('%',#{f.jobsUuid},'%')
+			</if>
+			<if test="f.capTypeFrom != null and f.capTypeFrom != '' ">
+				and cap_type &gt;=#{f.capTypeFrom}
+			</if>
+			<if test="f.capTypeEnd != null and f.capTypeEnd != '' ">
+				and cap_type &lt;= #{f.capTypeEnd}
+			</if>
+			<if test="f.capUuid != null and f.capUuid != '' ">
+				and cap_uuid like CONCAT('%',#{f.capUuid},'%')
+			</if>
+		</where>
+	</select>
+</mapper>

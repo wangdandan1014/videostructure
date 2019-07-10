@@ -1,0 +1,210 @@
+package com.sensing.core.utils.task;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.sensing.core.bean.Channel;
+import com.sensing.core.dao.IChannelDAO;
+import com.sensing.core.dao.ITaskDAO;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.time.DateUtil;
+
+//@Component
+public class TaskTimer {
+	
+	@Resource
+	public ITaskDAO taskDAO;
+	@Resource
+	public IChannelDAO channelDAO;
+
+	private Log log = LogFactory.getLog(TaskTimer.class);
+	
+	public void startTask(){
+		log.info("定时任务开始执行:"+new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+		try {
+			// analysis_type该字段的值未获取到
+			List<Channel> channelList = channelDAO.selectAllChannelList();
+			List<TaskBean> taskList = taskDAO.queryTaskAndJobsList();
+			
+			if ( channelList != null && channelList.size() > 0  ) {
+				for ( int i = 0; i < channelList.size() ; i++ ) {
+					Channel device = channelList.get(i);
+//					TaskBean taskBean = new TaskBean();
+					
+					for (int j = 0; j < taskList.size() ; j++) {
+						TaskBean tb = taskList.get(j);
+						DeviceBean db = new DeviceBean();
+						
+						if ( StringUtils.isNotEmpty(tb.getDevices()) && tb.getDevices().contains(device.getUuid()) ) {
+							db.setUuid(device.getUuid());
+//							.TaskTimer........
+							if ( tb.getTaskType() == 1 ) {
+							}
+						}
+						List<Integer> taskCapTypeList = new ArrayList<Integer>();
+						taskCapTypeList.add(1);
+						db.setTaskCapTypeList(taskCapTypeList);
+						
+						
+						List<Integer> jobCapTypeList = new ArrayList<Integer>();
+						jobCapTypeList.add(3);
+						db.setTaskCapTypeList(jobCapTypeList);
+						
+						// 通知mongodb缓存
+							//db.getJobCapTypeList()
+						// 通知抓拍打开的通道类型(保存到db)
+							// 1,3
+							// db.getJobCapTypeList()+db.getTaskCapTypeList()
+							//
+						
+						
+						
+						
+					}
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+				}
+			}
+			
+		} catch (Exception e) {
+		}
+	}
+	
+	
+	/**
+	 * 根据当前的时间判断任务在5分钟延迟之后返回的，抓拍类型
+	 * @param tb
+	 * @param currDate
+	 * @return
+	 * @author mingxingyu
+	 * @date   2019年1月18日 下午3:01:51
+	 */
+	public List<Integer> getStateByTask(TaskBean tb,Date currDate){
+		//空结果集
+		List<Integer> emptyResultList = new ArrayList<Integer>();
+		//日期要在范围内
+		if ( tb.getBeginDate() != null ) {
+			long beginDateUnix = tb.getBeginDate().getTime()/1000;
+			if ( currDate.getTime()/1000 < beginDateUnix ) {
+				return emptyResultList;
+			}
+		}
+		if ( tb.getEndDate() != null ) {
+			long endDateUnix = tb.getEndDate().getTime()/1000;
+			if ( currDate.getTime()/1000 > endDateUnix ) {
+				return emptyResultList;
+			}
+		}
+		//周数要在范围内
+		if ( StringUtils.isNotEmpty(tb.getRunWeek()) ) {
+			int week = DateUtil.getWeek(currDate);
+			if ( !tb.getRunWeek().contains(week+"") ) {
+				return emptyResultList;
+			}
+		}
+
+		//延迟是五分钟
+		int delay = 5;
+		int aDayTime = 86400;
+		
+		//实时结构化任务
+		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+		//时间点
+		String[] startTimeArr = tb.getStartTime().split(":");
+		String[] endTimeArr = tb.getEndTime().split(":");
+		String[] currTimeArr = sdf.format(currDate).split(":");
+		
+		long startTimeUnix = Integer.parseInt(startTimeArr[0])*3600+Integer.parseInt(startTimeArr[1])*60+Integer.parseInt(startTimeArr[0]);
+		long endTimeUnix = Integer.parseInt(endTimeArr[0])*3600+Integer.parseInt(endTimeArr[1])*60+Integer.parseInt(endTimeArr[0]);
+		long currTimeUnix = Integer.parseInt(currTimeArr[0])*3600+Integer.parseInt(currTimeArr[1])*60+Integer.parseInt(currTimeArr[0]);
+		
+		if ( tb.getTaskType() == 1 ) {
+			
+			String analyType = tb.getAnalyType();
+			List<Integer> analyTypeList = Arrays.asList(analyType.split(",")).stream().map(item->(Integer.parseInt(item))).collect(Collectors.toList());
+			//待启动
+			if ( tb.getState() == Constants.TASK_STAT_WAITSTART ) {
+				long delayTime = currTimeUnix+delay*60;
+				if ( delayTime < endTimeUnix && delayTime >= startTimeUnix ) {
+					return analyTypeList;
+				}
+				if ( delayTime > endTimeUnix && (delayTime - aDayTime) >= startTimeUnix ) {
+					return analyTypeList;
+				}
+			}
+			//处理中
+			if ( tb.getState() == Constants.TASK_STAT_RUNNING ) {
+				long delayTime = currTimeUnix+delay*60;
+				if ( currTimeUnix > endTimeUnix &&  (delayTime-aDayTime < startTimeUnix) ) {
+					return emptyResultList;
+				}
+			}
+			//休息中
+			if ( tb.getState() == Constants.TASK_STAT_INREST ) {
+				long delayTime = currTimeUnix+delay*60;
+				if ( currTimeUnix > endTimeUnix && (delayTime - aDayTime) >= startTimeUnix ) {
+					return analyTypeList;
+				}
+				if ( currTimeUnix < endTimeUnix && delayTime >= startTimeUnix  ) {
+					return analyTypeList;
+				}
+			}
+			// 失败
+		}
+		//布控任务
+		if ( tb.getTaskType() == 2 ) {
+			String analyType = tb.getAnalyType();
+			List<Integer> analyTypeList = Arrays.asList(analyType.split(",")).stream().map(item->(Integer.parseInt(item))).collect(Collectors.toList());
+			
+			//待启动
+			if ( tb.getState() == Constants.JOB_STATE_WAITSTART ) {
+				long delayTime = currTimeUnix+delay*60;
+				if ( currTimeUnix < endTimeUnix && delayTime >= startTimeUnix ) {
+					return analyTypeList;
+				}
+				if ( currTimeUnix > endTimeUnix && ( delayTime - aDayTime ) >= startTimeUnix ) {
+					return analyTypeList;
+				}
+			}
+			//布控中
+			if ( tb.getState() == Constants.JOB_STATE_RUNNING ) {
+				long delayTime = currTimeUnix + delay*60;
+				if ( currTimeUnix > endTimeUnix &&  (delayTime-aDayTime < startTimeUnix) ) {
+					return emptyResultList;
+				}
+			}
+			//休息中
+			if ( tb.getState() == Constants.JOB_STATE_INREST ) {
+				long delayTime = currTimeUnix + delay*60;
+				if ( currTimeUnix > endTimeUnix && (delayTime - aDayTime) >= startTimeUnix ) {
+					return analyTypeList;
+				}
+				if ( currTimeUnix < endTimeUnix && delayTime >= startTimeUnix  ) {
+					return analyTypeList;
+				}
+			}
+		}
+		return emptyResultList;
+	}
+	
+}
+
+

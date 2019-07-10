@@ -1,0 +1,838 @@
+package com.sensing.core.controller;
+
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.poi.ss.formula.functions.T;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
+import com.sensing.core.bean.MotorVehicle;
+import com.sensing.core.bean.NonmotorVehicle;
+import com.sensing.core.bean.Person;
+import com.sensing.core.bean.alarm.req.AlarmReq;
+import com.sensing.core.bean.alarm.resp.AlarmResp;
+import com.sensing.core.bean.result.TrafficCount;
+import com.sensing.core.resp.CapResp;
+import com.sensing.core.service.IAlarmService;
+import com.sensing.core.service.IChannelService;
+import com.sensing.core.service.IExportExcelService;
+import com.sensing.core.service.ISearchQueryService;
+import com.sensing.core.utils.BaseController;
+import com.sensing.core.utils.BeanUtil;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.ExcelHelper;
+import com.sensing.core.utils.Pager;
+import com.sensing.core.utils.ResponseBean;
+import com.sensing.core.utils.StringUtils;
+import com.sensing.core.utils.props.PropUtils;
+import com.sensing.core.utils.results.ResultUtils;
+import com.sensing.core.utils.time.DateStyle;
+import com.sensing.core.utils.time.DateUtil;
+import com.sensing.core.utils.time.QueryDateUtils;
+import com.sensing.core.utils.time.TransfTimeUtil;
+
+@Controller
+@RequestMapping("export")
+//@SuppressWarnings("all")
+public class ExportExcelController extends BaseController {
+
+	private static final Log log = LogFactory.getLog(ExportExcelController.class);
+	@Resource
+	private IExportExcelService exportExcelService;
+	@Resource
+	private ISearchQueryService searchQueryService;
+	@Resource
+	private IChannelService channelService;
+	@Resource
+	public IAlarmService alarmService;
+
+	/**
+	 * 将统计的告警数量导出到excel表格
+	 * 
+	 * @param p
+	 * @param response
+	 * @return
+	 * @author mingxingyu
+	 * @date 2018年12月12日 上午9:55:36
+	 */
+	@SuppressWarnings("unchecked")
+	@ResponseBody
+	@RequestMapping("/alarmCountToExcel")
+	public ResponseBean alarmCountToExcel(@RequestBody JSONObject p) {
+		ResponseBean result = new ResponseBean();
+		try {
+			Map<String, Object> params = new HashMap<String, Object>();
+			if (!p.isEmpty()) {
+				params = JSONObject.toJavaObject(p, Map.class);
+			}
+
+			SXSSFWorkbook workbook = exportExcelService.alarmCountToExcel(params);
+
+			if (workbook != null) {
+				try {
+					FileOutputStream outputStream;
+					Date date = new Date();
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+					String filePath = PropUtils.getString("cachedata_addr") + "/alarmcount" + sdf.format(date)
+							+ ".xlsx";
+					String requestPath = PropUtils.getString("watch_cachedata") + "/alarmcount" + sdf.format(date)
+							+ ".xlsx";
+					outputStream = new FileOutputStream(filePath);
+					workbook.write(outputStream);
+					outputStream.flush();
+					outputStream.close();
+
+					result.setError(0);
+					result.setMessage("successful");
+					result.getMap().put("filePath", requestPath);
+					return result;
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		} catch (Exception e) {
+		}
+		return ResultUtils.success();
+	}
+
+	/**
+	 * 日志文件导出
+	 * 
+	 * @param p        检索条件
+	 * @param response
+	 * @return
+	 * @author mingxingyu
+	 * @date 2018年11月16日 下午4:48:07
+	 */
+	@ResponseBody
+	@RequestMapping("/logExportToExcel")
+	public ResponseBean logExportToExcel(@RequestBody JSONObject p, HttpServletResponse response) {
+		ResponseBean result = new ResponseBean();
+		Pager pager = new Pager();
+		if (!p.isEmpty()) {
+			pager = JSONObject.toJavaObject(p, Pager.class);
+			pager.setPageFlagNull(null);
+		}
+		SXSSFWorkbook workbook = exportExcelService.logExportToExcel(pager);
+
+//		if (workbook != null) {
+//			OutputStream os = null;
+//			try {
+//				os = new BufferedOutputStream(response.getOutputStream());
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//			// 循环将文件写入压缩流
+//			try {
+//				String downloadFilename = "日志文件.xlsx";// 文件的名称
+//				downloadFilename = URLEncoder.encode(downloadFilename, "UTF-8");// 转换中文否则可能会产生乱码
+//				response.setContentType("application/octet-stream");// 指明response的返回对象是文件流
+//				response.setHeader("Content-Disposition",
+//						"attachment;filename=" + URLEncoder.encode(downloadFilename, "UTF-8"));// 设置在下载框默认显示的文件名
+//
+//				workbook.write(os);
+//			} catch (UnsupportedEncodingException e) {
+//				e.printStackTrace();
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}
+
+		if (workbook != null) {
+			try {
+				FileOutputStream outputStream;
+				Date date = new Date();
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+				String filePath = PropUtils.getString("cachedata_addr") + "/rpclog" + sdf.format(date) + ".xlsx";
+				String requestPath = PropUtils.getString("watch_cachedata") + "/rpclog" + sdf.format(date) + ".xlsx";
+				outputStream = new FileOutputStream(filePath);
+				workbook.write(outputStream);
+				outputStream.flush();
+				outputStream.close();
+
+				result.setError(0);
+				result.setMessage("successful");
+				result.getMap().put("filePath", requestPath);
+				return result;
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return ResultUtils.success();
+	}
+
+	/**
+	 * 导出检索数据
+	 * 
+	 * @param json
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+//	@ResponseBody
+	@RequestMapping("/exportSearchToExcel")
+	public void exportSearchInfoToExcel(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		log.info("开始导出检索数据，调用 export/exportSearchToExcel接口");
+		List<CapResp> respList = new ArrayList<CapResp>();
+		List<T> list = null;
+		Map<String, String> f = new HashMap<String, String>();
+		long l1 = System.currentTimeMillis();
+		String resultList = request.getParameter("resultList");
+		if (StringUtils.isNotEmpty(resultList)) {
+			String jsonStr = "[" + resultList + "]";
+			JSONArray jsonArray = JSON.parseArray(jsonStr);
+			int size = jsonArray.size();
+			for (int i = 0; i < size; i++) {
+				CapResp cap = new CapResp();
+				JSONObject object = jsonArray.getJSONObject(i);
+				String id = (String) object.get("id");
+				Integer capType = (Integer) object.get("capType");
+				String score = (String) object.get("score");
+				if (capType == 1) {
+					Person person = (Person) searchQueryService.getMGObjectByUuid(id, Constants.PERSON);
+					cap.setCapPeople(person);
+					cap.setScore(score);
+				}
+				if (capType == 3) {
+					MotorVehicle mv = (MotorVehicle) searchQueryService.getMGObjectByUuid(id, Constants.MOTOR_VEHICLE);
+					cap.setMotorVehicle(mv);
+					cap.setScore(score);
+				}
+				if (capType == 4) {
+					NonmotorVehicle nv = (NonmotorVehicle) searchQueryService.getMGObjectByUuid(id,
+							Constants.NONMOTOR_VEHICLE);
+					cap.setCapNonmotor(nv);
+					cap.setScore(score);
+				}
+				respList.add(cap);
+			}
+		}
+		String capType = request.getParameter("capType");
+		String uuids = request.getParameter("uuids");
+		if (StringUtils.isEmptyOrNull(capType)) {
+			String fJson = request.getParameter("f");
+			if (StringUtils.isNotEmpty(fJson)) {
+				JSONObject jo = JSONObject.parseObject(fJson);
+				f = JSONObject.parseObject(jo.toJSONString(), new TypeReference<Map<String, String>>() {
+				});
+				capType = f.get("capType");
+			}
+		}
+		String type = request.getParameter("type");// 特殊资源 1-文本加图片 2-文本
+		if (StringUtils.isNotEmpty(uuids)) {
+			Map<String, Object> map = searchQueryService.queryCapByUuids(Integer.valueOf(capType), uuids, null);
+			list = (List<T>) map.get("list" + "");
+		}
+		if (!f.isEmpty()) {
+			Pager pager = new Pager();
+			pager.setF(f);
+			pager.setPageRows(0);
+			pager = searchQueryService.queryPage(pager);
+			list = pager.getResultList();
+		}
+		if (list != null && list.size() > 0) {
+			switch (capType) {
+			case "1":
+				for (Object capPeople : list) {
+					CapResp resp = new CapResp();
+					resp.setCapPeople((Person) capPeople);
+					respList.add(resp);
+				}
+				break;
+			case "3":
+				for (Object motorVehicle : list) {
+					CapResp resp = new CapResp();
+					resp.setMotorVehicle((MotorVehicle) motorVehicle);
+					respList.add(resp);
+				}
+				break;
+			case "4":
+				for (Object capNonmotor : list) {
+					CapResp resp = new CapResp();
+					resp.setCapNonmotor((NonmotorVehicle) capNonmotor);
+					respList.add(resp);
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		long l2 = System.currentTimeMillis();
+		log.info("查询mongo耗时----------------" + (l2 - l1) / 1000);
+		long l3 = System.currentTimeMillis();
+		SXSSFWorkbook workbook = null;
+		try {
+			workbook = exportExcelService.exportSearchInfoToExcel(Integer.valueOf(capType), respList,
+					Integer.parseInt(type));
+			long l4 = System.currentTimeMillis();
+			log.info("生成excel耗时----------------" + (l4 - l3) / 1000);
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.error(e);
+		}
+		String dateStr = DateUtil.DateToString(new Date(), "yyyyMMddHHmmssSSS");
+		// 设置压缩流：直接写入response，实现边压缩边下载
+		long l7 = System.currentTimeMillis();
+		ZipOutputStream zipos = null;
+		try {
+			zipos = new ZipOutputStream(new BufferedOutputStream(response.getOutputStream()));
+			zipos.setMethod(ZipOutputStream.DEFLATED); // 设置压缩方法
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		// 循环将文件写入压缩流
+		try {
+			String downloadFilename = "dataexport.zip";// 文件的名称
+			downloadFilename = URLEncoder.encode(downloadFilename, "UTF-8");// 转换中文否则可能会产生乱码
+			response.setContentType("application/octet-stream");// 指明response的返回对象是文件流
+			response.setHeader("Content-Disposition", "attachment;filename=" + downloadFilename);// 设置在下载框默认显示的文件名
+			if (type != null && capType != null && Integer.parseInt(type) == 1) {
+				String folder = "pictures/";
+				switch (capType) {
+				case "1":
+					for (int i = 0; i < respList.size(); i++) {
+						String uri = respList.get(i).getCapPeople().getCapUrl();
+						URL url = new URL(uri);
+						String suffix = respList.get(i).getCapPeople().getCapUrl()
+								.substring(respList.get(i).getCapPeople().getCapUrl().lastIndexOf("."));
+						zipos.putNextEntry(new ZipEntry(folder + (i + 1) + "-1" + suffix));
+						InputStream fis = url.openConnection().getInputStream();
+						byte[] buffer = new byte[1024];
+						int r = 0;
+						while ((r = fis.read(buffer)) != -1) {
+							zipos.write(buffer, 0, r);
+						}
+						String url2 = respList.get(i).getCapPeople().getSeceneUrl();
+						URL url1 = new URL(url2);
+						String suffix1 = respList.get(i).getCapPeople().getSeceneUrl()
+								.substring(respList.get(i).getCapPeople().getSeceneUrl().lastIndexOf("."));
+						zipos.putNextEntry(new ZipEntry(folder + (i + 1) + "-2" + suffix1));
+						InputStream fis1 = url1.openConnection().getInputStream();
+						byte[] buffer1 = new byte[1024];
+						int r1 = 0;
+						while ((r1 = fis1.read(buffer1)) != -1) {
+							zipos.write(buffer1, 0, r1);
+						}
+						fis.close();
+						fis1.close();
+					}
+					break;
+				case "3":
+					for (int i = 0; i < respList.size(); i++) {
+						String uri = respList.get(i).getMotorVehicle().getCapUrl();
+						URL url = new URL(uri);
+						String suffix = respList.get(i).getMotorVehicle().getCapUrl()
+								.substring(respList.get(i).getMotorVehicle().getCapUrl().lastIndexOf("."));
+						zipos.putNextEntry(new ZipEntry(folder + (i + 1) + "-1" + suffix));
+						InputStream fis = url.openConnection().getInputStream();
+						byte[] buffer = new byte[1024];
+						int r = 0;
+						while ((r = fis.read(buffer)) != -1) {
+							zipos.write(buffer, 0, r);
+						}
+						String url2 = respList.get(i).getMotorVehicle().getSeceneUrl();
+						URL url1 = new URL(url2);
+						String suffix1 = respList.get(i).getMotorVehicle().getSeceneUrl()
+								.substring(respList.get(i).getMotorVehicle().getSeceneUrl().lastIndexOf("."));
+						zipos.putNextEntry(new ZipEntry(folder + (i + 1) + "-2" + suffix1));
+						InputStream fis1 = url1.openConnection().getInputStream();
+						byte[] buffer1 = new byte[1024];
+						int r1 = 0;
+						while ((r1 = fis1.read(buffer1)) != -1) {
+							zipos.write(buffer1, 0, r1);
+						}
+						fis.close();
+						fis1.close();
+					}
+					break;
+				case "4":
+					for (int i = 0; i < respList.size(); i++) {
+						String uri = respList.get(i).getCapNonmotor().getCapUrl();
+						URL url = new URL(uri);
+						String suffix = respList.get(i).getCapNonmotor().getCapUrl()
+								.substring(respList.get(i).getCapNonmotor().getCapUrl().lastIndexOf("."));
+						zipos.putNextEntry(new ZipEntry(folder + (i + 1) + "-1" + suffix));
+						InputStream fis = url.openConnection().getInputStream();
+						byte[] buffer = new byte[1024];
+						int r = 0;
+						while ((r = fis.read(buffer)) != -1) {
+							zipos.write(buffer, 0, r);
+						}
+						String url2 = respList.get(i).getCapNonmotor().getSeceneUrl();
+						URL url1 = new URL(url2);
+						String suffix1 = respList.get(i).getCapNonmotor().getSeceneUrl()
+								.substring(respList.get(i).getCapNonmotor().getSeceneUrl().lastIndexOf("."));
+						zipos.putNextEntry(new ZipEntry(folder + (i + 1) + "-2" + suffix1));
+						InputStream fis1 = url1.openConnection().getInputStream();
+						byte[] buffer1 = new byte[1024];
+						int r1 = 0;
+						while ((r1 = fis1.read(buffer1)) != -1) {
+							zipos.write(buffer1, 0, r1);
+						}
+						fis.close();
+						fis1.close();
+					}
+					break;
+				default:
+					break;
+				}
+			}
+			String suffix2 = ".xlsx";
+			zipos.putNextEntry(new ZipEntry(dateStr + suffix2));
+			workbook.write(zipos);
+			long l8 = System.currentTimeMillis();
+			log.info("边压缩边下载耗时-----------------------" + (l8 - l7) / 1000);
+			zipos.flush();
+			zipos.close();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 导出通行量数据
+	 * 
+	 * @param json
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	@ResponseBody
+	@RequestMapping("/exporttrafficCountInfoToExcel")
+	public ResponseBean exporttrafficCountInfoToExcel(@RequestBody JSONObject json, HttpServletRequest request,
+			HttpServletResponse response) throws Exception {
+		log.info("开始导出通行量数据，调用 export/exporttrafficCountInfoToExcel接口，传递参数为: " + json);
+		ResponseBean result = new ResponseBean();
+		if (json == null || json.isEmpty()) {
+			log.error("请求参数非法!");
+			result = ResultUtils.FAIL();
+			return result;
+		}
+		String startTimeStr = json.getString("startDate" + "");
+		String endTimeStr = json.getString("endDate" + "");
+		String type = json.getString("type" + "");
+		JSONArray resultList = json.getJSONArray("resultList" + "");
+		List<TrafficCount> tcList = JSONArray.parseArray(resultList.toJSONString(), TrafficCount.class);
+		SXSSFWorkbook workbook = exportExcelService.exporttrafficCount(startTimeStr, endTimeStr, tcList, type);
+		if (workbook != null) {
+			try {
+				FileOutputStream outputStream;
+				Date date = new Date();
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+				String filePath = PropUtils.getString("cachedata_addr") + "/trafficCount" + sdf.format(date) + ".xlsx";
+				String requestPath = PropUtils.getString("watch_cachedata") + "/trafficCount" + sdf.format(date)
+						+ ".xlsx";
+				outputStream = new FileOutputStream(filePath);
+				workbook.write(outputStream);
+				outputStream.flush();
+				outputStream.close();
+
+				result.setError(0);
+				result.setMessage("successful");
+				result.getMap().put("filePath", requestPath);
+				return result;
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return ResultUtils.success();
+
+	}
+
+//	/**
+//	 * 导出通行量数据
+//	 * 
+//	 * @param json
+//	 * @param request
+//	 * @param response
+//	 * @return
+//	 * @throws Exception
+//	 */
+//	@SuppressWarnings("unchecked")
+//	@ResponseBody
+//	@RequestMapping("/exporttrafficCountInfoToExcel")
+//	public ResponseBean exporttrafficCountInfoToExcel(@RequestBody JSONObject json, HttpServletRequest request,
+//			HttpServletResponse response) throws Exception {
+//		log.info("开始导出通行量数据，调用 export/exporttrafficCountInfoToExcel接口，传递参数为: " + json);
+//		ResponseBean result = new ResponseBean();
+//		if (json == null || json.isEmpty()) {
+//			log.error("请求参数非法!");
+//			result = ResultUtils.FAIL();
+//			return result;
+//		}
+//		Map<String, Object> sqlParams = new HashMap<String, Object>();
+//		String startTimeStr = json.getString("startDate" + "");
+//		String endTimeStr = json.getString("endDate" + "");
+//		if (StringUtils.isNotEmpty(startTimeStr) || StringUtils.isNotEmpty(endTimeStr)) {
+//			sqlParams.put("startTime", DateUtil.StringToDate(startTimeStr).getTime() / 1000);
+//			sqlParams.put("endTime", DateUtil.StringToDate(endTimeStr).getTime() / 1000);
+//		} else {
+//			result = ResultUtils.REQUIRED_EMPTY_ERROR();
+//			return result;
+//		}
+//		List<TrafficCount> tcList = new ArrayList<>();
+//		Map<String, Object> map = searchQueryService.trafficCount(sqlParams);
+//		List<Map<String, Object>> mapList = (List<Map<String, Object>>) map.get("resultList");
+//		for (Map<String, Object> bean : mapList) {
+//			TrafficCount c = (TrafficCount) BeanUtil.transMap2Bean(bean, new TrafficCount());
+//			tcList.add(c);
+//		}
+//		FileOutputStream out = null;
+//		String dateStr = DateUtil.DateToString(new Date(), "yyyyMMddHHmmssSSS");
+//		String filePath = PropUtils.getString("cachedata_addr") + "/" + dateStr + ".xlsx";
+//		try {
+//			out = new FileOutputStream(filePath);
+//			ExcelHelper<TrafficCount> util = new ExcelHelper<TrafficCount>(TrafficCount.class);
+//			util.exportExcel(tcList, "Sheet1", 60000, out);
+//			filePath = PropUtils.getString("watch_cachedata") + "/" + dateStr + ".xlsx";
+//			result.setError(0);
+//			result.setMessage("successful");
+//			result.getMap().put("filePath", filePath);
+//		} catch (Exception ex) {
+//			ex.printStackTrace();
+//			result.setError(-1);
+//			result.setMessage(ex.getMessage());
+//			logger.error(ex.getMessage(), ex);
+//			return result;
+//			
+//		} finally {
+//			if (out != null) {
+//				try {
+//					out.close();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//					result.setError(-1);
+//					result.setMessage(e.getMessage());
+//					logger.error(e.getMessage(), e);
+//					return result;
+//				}
+//			}
+//		}
+//		return result;
+//	}
+	// 有通道
+//	/**
+//	 * 导出通行量数据
+//	 * 
+//	 * @param json
+//	 * @param request
+//	 * @param response
+//	 * @return
+//	 * @throws Exception
+//	 */
+//	@ResponseBody
+//	@RequestMapping("/exporttrafficCountInfoToExcel")
+//	public ResponseBean exporttrafficCountInfoToExcel(@RequestBody JSONObject json, HttpServletRequest request,
+//			HttpServletResponse response) throws Exception {
+//		log.info("开始导出通行量数据，调用 export/exporttrafficCountInfoToExcel接口，传递参数为: " + json);
+//		ResponseBean result = new ResponseBean();
+//		Map<String, Object> param = new HashMap<String, Object>();
+//		if (json == null || json.isEmpty()) {
+//			log.error("请求参数非法!");
+//			result = ResultUtils.FAIL();
+//			return result;
+//		}
+//		String channelUuids = json.getString("channelUuids" + "");
+//		String[] ids = channelUuids.split(",");
+//		List<Channel> channels = channelService.getChannelByIds(ids);
+//		
+//		Map<String, Object> map = new HashMap<String, Object>();
+//		List<Map<String, Object>> mList = new ArrayList<>();
+//		String startTime = json.getString("startTime" + "");
+//		String endTime = json.getString("endTime" + "");
+//		Long sTime = TransfTimeUtil.Date2TimeStampReturnLong(startTime, DateStyle.YYYY_MM_DD_HH_MM_SS);
+//		Long eTime = TransfTimeUtil.Date2TimeStampReturnLong(endTime, DateStyle.YYYY_MM_DD_HH_MM_SS);
+//		if (eTime - sTime > 86400) {// 导出多天数据
+//			int i = (int) ((eTime - sTime) / 86400);// 导出i天数据
+//			for (int j = i; j > 0; j--) {
+//				String time = TransfTimeUtil.UnixTimeStamp2Date(sTime, DateStyle.YYYY_MM_DD);
+//				map.put("channels", channels);
+//				eTime = sTime + 86400;
+//				map = searchQueryService.trafficCount(channelUuids,
+//						TransfTimeUtil.UnixTimeStamp2Date(sTime, DateStyle.YYYY_MM_DD_HH_MM_SS),
+//						TransfTimeUtil.UnixTimeStamp2Date(eTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+//				map.put("time", time);
+//				sTime = eTime;
+//				mList.add(map);
+//			}
+//			log.info(mList);
+//		} else {
+//			map = searchQueryService.trafficCount(channelUuids, startTime, endTime);
+//			String time = TransfTimeUtil.TimeStamp2DateByString(startTime, DateStyle.YYYY_MM_DD_HH_MM_SS,
+//					DateStyle.YYYY_MM_DD);
+//			map.put("time", time);
+//			map.put("channels", channels);
+//			mList.add(map);
+//		}
+//		SXSSFWorkbook workbook = null;
+//		String filePath = null;
+//		try {
+//			workbook = exportExcelService.exporttrafficCountInfoToExcel(mList);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			log.error("导出通行量数据失败，错误信息为：" + e);
+//			result = ResultUtils.UNKONW_ERROR();
+//		}
+//		if (workbook != null) {
+//			String dateStr = DateUtil.DateToString(new Date(), "yyyyMMddHHmmssSSS");
+//			String path = request.getSession().getServletContext().getRealPath("/");
+//			String realPath = path.substring(0, path.lastIndexOf(Constants.PROJECT_NAME)) + Constants.PROJECT_ROOT + "/"
+//					+ Constants.EXPORT_EXCEL_FILENAME + "/" + dateStr + ".xlsx";
+//			File file = new File(realPath);
+//			if (!file.exists()) {
+//				try {
+//					file.getParentFile().mkdir();
+//					file.createNewFile();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//					log.error(e);
+//					result = ResultUtils.UNKONW_ERROR();
+//				}
+//			}
+//			try {
+//				FileOutputStream outStream = new FileOutputStream(file);
+//				workbook.write(outStream);
+//				outStream.flush();
+//				outStream.close();
+//				filePath = Constants.WEB_DOWNLAOD_URL + Constants.EXPORT_EXCEL_FILENAME + "/" + dateStr + ".xlsx";
+//				param.put("filePath", filePath);
+//				param.put("realPath", realPath);
+//				result = ResultUtils.success(param);
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//				log.error(e);
+//				result = ResultUtils.UNKONW_ERROR();
+//			}
+//		}
+//		return result;
+//	}
+
+	/**
+	 * 导出报警数据
+	 * 
+	 * @param json
+	 * @param request
+	 * @param response
+	 * @return
+	 * @throws Exception
+	 */
+	@ResponseBody
+	@RequestMapping("/exportAlarmData")
+	@SuppressWarnings("unchecked")
+	public void exportAlarmData(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		log.info("开始导出报警数据，调用 export/exportAlarmData接口");
+		AlarmReq alarmReq = new AlarmReq();
+		Map<String, String> f = new HashMap<String, String>();
+		String type = request.getParameter("type");// 特殊资源 1-文本加图片 2-文本
+		if (StringUtils.isEmptyOrNull(type)) {
+			throw new Exception("type值不能为空！");
+		}
+		String jobUuid = request.getParameter("jobUuids");
+		if (StringUtils.isNotEmpty(jobUuid)) {
+			String[] jobUuids = jobUuid.split(",");
+			alarmReq.setJobUuids(jobUuids);
+		}
+		String deviceId = request.getParameter("deviceIds");
+		if (StringUtils.isNotEmpty(deviceId)) {
+			String[] deviceIds = deviceId.split(",");
+			alarmReq.setDeviceIds(deviceIds);
+		}
+		String uuid = request.getParameter("uuids");
+		String[] uuids = null;
+		if (StringUtils.isNotEmpty(uuid)) {
+			uuids = uuid.split(",");
+			alarmReq.setUuids(uuids);
+		} else {
+			String fJson = request.getParameter("f");
+			JSONObject jo = JSONObject.parseObject(fJson);
+			if (jo != null) {
+				Map<String, String> fMap = JSONObject.parseObject(jo.toJSONString(),
+						new TypeReference<Map<String, String>>() {
+						});
+				String date = fMap.get("date");
+				if (StringUtils.isNotEmpty(date)) {
+
+					long startTime = 0l;
+					long endTime = 0l;
+					Date[] dates;
+					if ("1".equals(date)) {
+						dates = QueryDateUtils.getToday();
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					} else if ("-1".equals(date)) {
+						dates = QueryDateUtils.getYesterday();
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					} else if ("-3".equals(date)) {
+						dates = QueryDateUtils.get3Day();
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					} else if ("-7".equals(date)) {
+						dates = QueryDateUtils.get7Day();
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					} else if ("-30".equals(date)) {
+						dates = QueryDateUtils.get30Day();
+						endTime = dates[0].getTime() / 1000;
+						startTime = dates[1].getTime() / 1000;
+					} else {
+						endTime = new Date().getTime() / 1000;
+						startTime = endTime;
+					}
+					fMap.put("startTime", TransfTimeUtil.UnixTimeStamp2Date(startTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+					fMap.put("endTime", TransfTimeUtil.UnixTimeStamp2Date(endTime, DateStyle.YYYY_MM_DD_HH_MM_SS));
+				}
+//				String json = fMap.get("f");
+//				if (StringUtils.isNotEmpty(json)) {
+//					JSONObject obj = JSONObject.parseObject(json);
+//					f = JSONObject.parseObject(obj.toJSONString(), new TypeReference<Map<String, String>>() {
+//					});
+//				}
+				alarmReq.setF(fMap);
+			} else {
+				String[] uuid1 = { "1" };
+				alarmReq.setUuids(uuid1);
+			}
+		}
+//		if (uuids == null || uuids.length == 0) {
+//			Enumeration<String> parameterNames = request.getParameterNames();
+//			while (parameterNames.hasMoreElements()) {
+//				String paramName = parameterNames.nextElement();
+//				String paramValue = request.getParameter(paramName);
+//				// 形成键值对应的map
+//				if (!paramName.equals("jobUuids") && !paramName.equals("deviceIds")) {
+//					f.put(paramName, paramValue);
+//				}
+//			}
+//			alarmReq.setF(f);
+//		} else {
+//		}
+		alarmReq.setPageFlag(null);
+		String dateStr = DateUtil.DateToString(new Date(), "yyyyMMddHHmmssSSS");
+		try {
+			alarmReq = alarmService.queryAlarmData(alarmReq);
+			List<AlarmResp> datas = alarmReq.getResultList();
+			List<String> capUuids = alarmService.queryCapUuids(alarmReq);
+			Map<String, Object> map = searchQueryService.queryCapByUuids(Constants.CAP_ANALY_TYPE_MOTOR_VEHICLE, null,
+					capUuids);
+			List<MotorVehicle> motorList = (List<MotorVehicle>) map.get("list" + "");
+
+			// 设置压缩流：直接写入response，实现边压缩边下载
+			ZipOutputStream zipos = null;
+			try {
+				zipos = new ZipOutputStream(new BufferedOutputStream(response.getOutputStream()));
+				zipos.setMethod(ZipOutputStream.DEFLATED); // 设置压缩方法
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
+			// 循环将文件写入压缩流
+			try {
+				String downloadFilename = "alarmexport.zip";// 文件的名称
+				downloadFilename = URLEncoder.encode(downloadFilename, "UTF-8");// 转换中文否则可能会产生乱码
+				response.setContentType("application/octet-stream");// 指明response的返回对象是文件流
+				response.setHeader("Content-Disposition", "attachment;filename=" + downloadFilename);// 设置在下载框默认显示的文件名
+
+				if (Integer.parseInt(type) == 1) {
+					String folder = "pictures/";
+					for (int i = 0; i < datas.size(); i++) {
+						String uri = datas.get(i).getCapImgUrl();
+						if (StringUtils.isNotEmpty(uri)) {
+							URL url = new URL(uri);
+							String suffix = datas.get(i).getCapImgUrl()
+									.substring(datas.get(i).getCapImgUrl().lastIndexOf("."));
+							zipos.putNextEntry(new ZipEntry(folder + (i + 1) + "-1" + suffix));
+							InputStream fis = url.openConnection().getInputStream();
+							byte[] buffer = new byte[1024];
+							int r = 0;
+							while ((r = fis.read(buffer)) != -1) {
+								zipos.write(buffer, 0, r);
+							}
+							fis.close();
+						}
+						String imgUrl = datas.get(i).getImgUrl();
+						if (StringUtils.isNotEmpty(imgUrl)) {
+							URL url = new URL(imgUrl);
+							String suffix = datas.get(i).getImgUrl()
+									.substring(datas.get(i).getImgUrl().lastIndexOf("."));
+							zipos.putNextEntry(new ZipEntry(folder + (i + 1) + suffix));
+							InputStream fis1 = url.openConnection().getInputStream();
+							byte[] buffer = new byte[1024];
+							int r = 0;
+							while ((r = fis1.read(buffer)) != -1) {
+								zipos.write(buffer, 0, r);
+							}
+							fis1.close();
+						}
+					}
+				}
+				for (int i = 0; i < datas.size(); i++) {
+					if (datas.get(i).getAlarmTime() != null) {
+						String timeStamp2Date = TransfTimeUtil.UnixTimeStamp2Date(datas.get(i).getAlarmTime(),
+								DateStyle.YYYY_MM_DD_HH_MM_SS);
+						datas.get(i).setaTime(timeStamp2Date);
+					}
+				}
+				SXSSFWorkbook workbook = null;
+				try {
+					workbook = exportExcelService.exportAlarmData(datas, motorList, Integer.parseInt(type));
+				} catch (Exception e) {
+					e.printStackTrace();
+					log.error(e);
+				}
+				String suffix2 = ".xlsx";
+				zipos.putNextEntry(new ZipEntry(dateStr + suffix2));
+				workbook.write(zipos);
+				zipos.flush();
+				zipos.close();
+
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+
+}

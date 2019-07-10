@@ -1,0 +1,421 @@
+package com.sensing.core.controller;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Set;
+
+import javax.annotation.Resource;
+import javax.imageio.stream.FileImageInputStream;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.BasicQuery;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.alibaba.fastjson.JSONObject;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
+import com.sensing.core.alarm.AlarmCache;
+import com.sensing.core.alarm.AlarmTask;
+import com.sensing.core.alarm.CountInfo;
+import com.sensing.core.alarm.DataInitService;
+import com.sensing.core.bean.MotorVehicle;
+import com.sensing.core.bean.NonmotorVehicle;
+import com.sensing.core.bean.Person;
+import com.sensing.core.bean.RpcLog;
+import com.sensing.core.cacahes.PreviewCache;
+import com.sensing.core.cacahes.SessionCache;
+import com.sensing.core.datasave.DataSaveCache;
+import com.sensing.core.service.ICapAttrConvertService;
+import com.sensing.core.service.ICapService;
+import com.sensing.core.service.IExportExcelService;
+import com.sensing.core.service.IRpcLogService;
+import com.sensing.core.thrift.cmp.bean.FeatureInfo;
+import com.sensing.core.utils.BaseController;
+import com.sensing.core.utils.Pager;
+import com.sensing.core.utils.ResponseBean;
+import com.sensing.core.utils.UuidUtil;
+import com.sensing.core.utils.props.PropUtils;
+import com.sensing.core.utils.task.JobsAndTaskTimer;
+
+
+@Controller
+@RequestMapping("/test")
+@SuppressWarnings("all")
+public class TestController extends BaseController {
+
+    private static final Log log = LogFactory.getLog(TestController.class);
+
+    @Autowired
+    public ICapAttrConvertService capAttrConvertService;
+    @Autowired
+    public IRpcLogService rpcLogService;
+    @Autowired
+    public ICapService capService;
+    @Resource
+    private MongoTemplate mongoTemplate;
+    @Resource
+    public IExportExcelService exportExcelService;
+    @Resource
+    public DataInitService dataInitService;
+    @Resource
+    public JobsAndTaskTimer jobsAndTaskTimer;
+    
+    /**
+     * 获取session缓存的session的数量
+     * @param p
+     * @return
+     * @author mingxingyu
+     * @date   2019年3月22日 上午9:35:18
+     */
+    @ResponseBody
+    @RequestMapping("/sessionCacheSize")
+    public ResponseBean sessionCacheSize(@RequestBody JSONObject p) {
+    	ResponseBean result = new ResponseBean();
+    	try {
+    		result.getMap().put("sessionCacheSize",SessionCache.getSessionSize());
+    		result.setError(0);
+    		result.setMessage("successful");
+    	} catch (Exception e) {
+    		log.error(e);
+    		result.setError(100);
+    		result.setMessage(e.getMessage());
+    	}
+    	return result;
+    }
+    
+    /**
+     * 通道和任务关联关系的缓存的信息
+     * @param p
+     * @return
+     * @author mingxingyu
+     * @date   2018年12月3日 下午3:09:42
+     */
+    @ResponseBody
+    @RequestMapping("/startJobs")
+    public ResponseBean startJobs(@RequestBody JSONObject p) {
+    	ResponseBean result = new ResponseBean();
+    	try {
+    		
+    		jobsAndTaskTimer.startJobs();
+    		
+    		result.setError(0);
+    		result.setMessage("successful");
+    	} catch (Exception e) {
+    		log.error(e);
+    		result.setError(100);
+    		result.setMessage(e.getMessage());
+    	}
+    	return result;
+    }
+    
+    /**
+     * 通道和任务关联关系的缓存的信息
+     * @param p
+     * @return
+     * @author mingxingyu
+     * @date   2018年12月3日 下午3:09:42
+     */
+    @ResponseBody
+    @RequestMapping("/previewInfo")
+    public ResponseBean previewInfo(@RequestBody JSONObject p) {
+    	ResponseBean result = new ResponseBean();
+    	try {
+    		Long endTime = System.currentTimeMillis()/1000;
+    		result.getMap().put("devicePreviewMap", PreviewCache.devicePreviewMap.toString());
+    		
+    		Set<String> keySet = PreviewCache.userPreviewMap.keySet();
+    		String userPreviewMapStr = "";
+    		for (String string : keySet) {
+    			userPreviewMapStr += (string+":"+ Arrays.toString(PreviewCache.userPreviewMap.get(string))+";");
+    		}
+    		result.getMap().put("userPreviewMap", userPreviewMapStr);
+    		
+    		Set<String> keySet2 = DataSaveCache.deviceIdMap.keySet();
+    		String deviceIdMapStr = "";
+    		for (String string : keySet2) {
+    			deviceIdMapStr += (string+":"+ Arrays.toString(DataSaveCache.deviceIdMap.get(string))+";");
+    		}
+    		result.getMap().put("deviceIdMap", deviceIdMapStr);
+    		
+    		
+    		result.setError(0);
+    		result.setMessage("successful");
+    	} catch (Exception e) {
+    		log.error(e);
+    		result.setError(100);
+    		result.setMessage(e.getMessage());
+    	}
+    	return result;
+    }
+    
+    /**
+     * 打印缓存的信息
+     * @param p
+     * @return
+     * @author mingxingyu
+     * @date   2018年12月3日 下午3:09:42
+     */
+    @ResponseBody
+    @RequestMapping("/countInfo")
+    public ResponseBean countInfo(@RequestBody JSONObject p) {
+        ResponseBean result = new ResponseBean();
+        try {
+        	Long endTime = System.currentTimeMillis()/1000;
+        	result.getMap().put("capCount",CountInfo.capCount.longValue()/(endTime-CountInfo.startTime)*1.0);
+        	result.getMap().put("cmpCount",CountInfo.cmpCount.longValue()/(endTime-CountInfo.startTime)*1.0);
+        	result.getMap().put("dealCmpCount",CountInfo.dealCmpCount.longValue()/(endTime-CountInfo.startTime)*1.0);
+        	result.getMap().put("alarmCount",CountInfo.alarmCount.longValue()/(endTime-CountInfo.startTime)*1.0);
+        	result.getMap().put("cmpResultQuene.size",AlarmTask.cmpResultQuene.size());
+            result.setError(0);
+            result.setMessage("successful");
+        } catch (Exception e) {
+            log.error(e);
+            result.setError(100);
+            result.setMessage(e.getMessage());
+        }
+        return result;
+    }
+    
+    
+    /**
+     * 打印缓存的信息
+     * @param p
+     * @return
+     * @author mingxingyu
+     * @date   2018年12月3日 下午3:09:42
+     */
+    @ResponseBody
+    @RequestMapping("/printCache")
+    public ResponseBean printCache(@RequestBody JSONObject p) {
+        ResponseBean result = new ResponseBean();
+        try {
+        	
+        	result.getMap().put("deviceJobMap",AlarmCache.deviceJobMap);
+        	result.getMap().put("jobMap",AlarmCache.jobMap);
+        	result.getMap().put("jobTemplateDbMap",AlarmCache.jobTemplateDbMap);
+//        	result.getMap().put("templateDbList",AlarmCache.templateDbList);
+        	result.getMap().put("deviceMap",AlarmCache.deviceMap);
+        	
+            result.setError(0);
+            result.setMessage("successful");
+        } catch (Exception e) {
+            log.error(e);
+            result.setError(100);
+            result.setMessage(e.getMessage());
+        }
+        return result;
+    }
+    
+    /**
+     * 通知更新缓存
+     * @param p
+     * @return
+     * @author mingxingyu
+     * @date   2018年12月3日 下午3:09:42
+     */
+    @ResponseBody
+    @RequestMapping("/updateAlarmCache")
+    public ResponseBean updateAlarmCache(@RequestBody JSONObject p) {
+    	ResponseBean result = new ResponseBean();
+    	try {
+    		dataInitService.init();
+    		result.setError(0);
+    		result.setMessage("successful");
+    	} catch (Exception e) {
+    		log.error(e);
+    		result.setError(100);
+    		result.setMessage(e.getMessage());
+    	}
+    	return result;
+    }
+
+    @ResponseBody
+    @RequestMapping("/testMongo")
+    public ResponseBean testMongo(@RequestBody JSONObject p) {
+    	ResponseBean result = new ResponseBean();
+    	try {
+    		String uuid = p.getString("uuid");
+    		
+    		DBObject objQuery = new BasicDBObject();
+    		objQuery.put("uuid", uuid);
+    		BasicDBObject fieldsObject = new BasicDBObject();
+    		//指定返回的字段
+    		fieldsObject.put("capUrl", true);
+    		
+    		Query query = new BasicQuery(objQuery);
+    		for (int i = 0; i < 200; i++) {
+    			DBObject dbObject = mongoTemplate.getCollection("CapPeople").findOne(objQuery);
+    		}
+    		
+    		result.setError(0);
+    		result.setMessage("successful");
+    	} catch (Exception e) {
+    		log.error(e);
+    		result.setError(100);
+    		result.setMessage(e.getMessage());
+    	}
+    	return result;
+    }
+    @ResponseBody
+    @RequestMapping("/feaByImgBase")
+    public ResponseBean feaByImgBase(@RequestBody JSONObject p) {
+        ResponseBean result = new ResponseBean();
+        try {
+            Integer type = p.getInteger("type");
+            FeatureInfo featureInfo = null;
+            if (type == 1) {
+                featureInfo = capService.getFeaByImgBase(p.getString("imgBase64"));
+            } else {
+                featureInfo = capService.getFeaByImgBytes(image2byte("imgBytes"));
+            }
+            result.setError(0);
+            result.setMessage("successful");
+        } catch (Exception e) {
+            log.error(e);
+            result.setError(100);
+            result.setMessage(e.getMessage());
+        }
+        return result;
+    }
+
+
+    public byte[] image2byte(String path) {
+        byte[] data = null;
+        FileImageInputStream input = null;
+        try {
+            input = new FileImageInputStream(new File(path));
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buf = new byte[1024];
+            int numBytesRead = 0;
+            while ((numBytesRead = input.read(buf)) != -1) {
+                output.write(buf, 0, numBytesRead);
+            }
+            data = output.toByteArray();
+            output.close();
+            input.close();
+        } catch (FileNotFoundException ex1) {
+            ex1.printStackTrace();
+        } catch (IOException ex1) {
+            ex1.printStackTrace();
+        }
+        return data;
+    }
+
+    @ResponseBody
+    @RequestMapping("/testTransactional")
+    public ResponseBean testTransactional(@RequestBody JSONObject p) {
+        log.info("调用/sysOrg/query接口参数：" + p);
+        ResponseBean result = new ResponseBean();
+        try {
+
+            rpcLogService.saveNewRpcLog(new RpcLog(new Date(), "测试", "主动", "日志名称", "save", "192.168.1.109", 8000, "httpclient", 109, "成功", "事务测试数据", "", 2));
+            result.setError(0);
+            result.setMessage("successful");
+        } catch (Exception e) {
+            log.error(e);
+            result.setError(100);
+            result.setMessage(e.getMessage());
+        }
+        return result;
+    }
+
+    @ResponseBody
+    @RequestMapping("/test")
+    public ResponseBean query(@RequestBody JSONObject p) {
+        log.info("调用/sysOrg/query接口参数：" + p);
+        Pager pager = new Pager();
+        if (!p.isEmpty()) {
+            pager = JSONObject.toJavaObject(p, Pager.class);
+        }
+        ResponseBean result = new ResponseBean();
+        try {
+            Person person = new Person();
+            person.setUuid(UuidUtil.getUuid());
+            person.setAge(2);
+//            person.setSex(1);
+            person.setGenderCode(1);
+//            person.setLowerClothesTexture(3);
+            person.setTrousersTexture(3);
+
+            capAttrConvertService.personConvert(person);
+
+            NonmotorVehicle nonmotorVehicle = new NonmotorVehicle();
+            nonmotorVehicle.setUuid(UuidUtil.getUuid());
+            nonmotorVehicle.setAge(2);
+            nonmotorVehicle.setGenderCode(1);;
+            nonmotorVehicle.setVehicleColor(11);
+
+            capAttrConvertService.nonmotorVehicleConvert(nonmotorVehicle);
+
+            MotorVehicle motorVehicle = new MotorVehicle();
+            motorVehicle.setUuid(UuidUtil.getUuid());
+            motorVehicle.setPlateColor(4);
+            motorVehicle.setCalling(1);
+            motorVehicle.setOrientation(3);
+            motorVehicle.setPlateClass(8);
+
+            capAttrConvertService.motorVehicleConvert(motorVehicle);
+
+            result.getMap().put("pager", pager);
+            result.setError(0);
+            result.setMessage("successful");
+        } catch (Exception e) {
+            log.error(e);
+            result.setError(100);
+            result.setMessage(e.getMessage());
+        }
+        return result;
+    }
+
+    @ResponseBody
+    @RequestMapping("/testTime")
+    public ResponseBean testTime(@RequestBody JSONObject p) {
+        log.info("调用/utils/testTime接口参数：" + p);
+        Pager pager = new Pager();
+        ResponseBean result = new ResponseBean();
+        try {
+            Date date = new Date();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            log.info("date:" + date);
+            log.info("pretty:" + sdf.format(date));
+        } catch (Exception e) {
+            log.error(e);
+            result.setError(100);
+            result.setMessage(e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * 用户测试tomcat是否启动的接口
+     *
+     * @return
+     */
+    @ResponseBody
+    @RequestMapping("/tomcatheart")
+    public ResponseBean tomcatHeart(@RequestBody JSONObject p) {
+        return new ResponseBean();
+    }
+
+    @ResponseBody
+    @RequestMapping("/testProFiles")
+    public ResponseBean testProFiles(@RequestBody JSONObject p) {
+        String string = PropUtils.getString("default.core.ip");
+        log.info("info==="+string);
+        return new ResponseBean(-1, "default.core.ip===="+string);
+    }
+
+}
+	

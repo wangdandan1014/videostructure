@@ -1,0 +1,87 @@
+package com.sensing.core.dao;
+
+import java.util.Map;
+
+import org.apache.ibatis.annotations.Param;
+
+/**
+ * 
+ * <p>Title: ICmpDao</p>
+ * <p>Description:数据库的比对与数据保存</p>
+ * <p>Company: www.sensingtech.com</p> 
+ * @author	mingxingyu
+ * @date	2018年11月26日
+ * @version 1.0
+ */
+public interface IAlarmInfoDAO {
+
+	/**
+	 * 保存告警时候关联的机动车的属性
+	 * @param params
+	 * @return 是否保存成功
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date   2018年12月21日 下午2:54:29
+	 */
+	public int saveMotorVehicle(Map<String,Object> params)throws Exception;
+	
+	/**
+	 * 根据报警的uuid获取报警的状态值
+	 * @param params
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date   2018年11月27日 上午11:07:02
+	 */
+	public int queryByUuid(@Param("alarmUuid")String alarmUuid)throws Exception;
+	
+	/**
+	 * 查询抓拍机动车的数量
+	 * @param uuid 机动车抓拍的uuid
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date   2019年2月25日 上午10:33:00
+	 */
+	public int getMotorCountByUuid(@Param("uuid")String uuid)throws Exception;
+	
+	/**
+	 * 保存抓拍数据
+	 * @param params
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date   2018年11月27日 上午11:07:02
+	 */
+	public int saveCapture(Map<String,String> params)throws Exception;
+	
+	/**
+	 * 保存告警关联表
+	 * @param params
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date   2018年11月27日 上午11:07:17
+	 */
+	public int saveAlarmCmpLogs(Map<String,String> params)throws Exception;
+	
+	/**
+	 * 保存告警
+	 * @param params
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date   2018年11月27日 上午11:07:41
+	 */
+	public int saveAlarm(Map<String,Object> params)throws Exception;
+	
+	/**
+	 * 更新报警的信息
+	 * @param params
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date   2018年12月4日 下午2:14:44
+	 */
+	public int updateAlarm(Map<String,Object> params)throws Exception;
+}

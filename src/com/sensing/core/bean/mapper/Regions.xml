@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IRegionsDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.Regions">
+		<id column="id" property="id" />
+		<id column="region_name" property="regionName" />
+		<id column="region_description" property="regionDescription" />
+		<id column="parent_id" property="parentId" />
+		<id column="region_level" property="regionLevel" />
+		<id column="region_sort" property="regionSort" />
+		<id column="search_code" property="searchCode" />
+		<id column="channeUuidlStr" property="channeUuidlStr" />
+		<id column="channelNameStr" property="channelNameStr" />
+		<id column="childRegionIdStr" property="childRegionIdStr" />
+		<id column="childRegionNameStr" property="childRegionNameStr" />
+		<id column="channelRegionIdStr" property="channelRegionIdStr" />
+		<id column="childRegionParentIdStr" property="childRegionParentIdStr" />
+		<id column="node_type" property="nodeType" />
+		<id column="rId" property="rId" />
+		<id column="left_code" property="leftCode" />
+		<id column="channelCount" property="channelCount" />
+		<id column="create_time" property="createTime" />
+	</resultMap>
+	<sql id="column_list">
+		id,region_name,region_description,parent_id,region_level,region_sort,search_code
+	</sql>
+	<insert id="saveRegions" useGeneratedKeys="true" keyProperty="id" parameterType="com.sensing.core.bean.Regions">
+	   insert into regions(region_name,region_description,parent_id,region_level,region_sort,search_code,is_deleted)
+	   values(
+		   #{regionName},#{regionDescription},#{parentId},#{regionLevel},#{regionSort},#{searchCode},#{isDeleted}
+	   )
+	</insert>
+	<select id="getRegions" resultMap="resultMap">
+		select
+		<include refid="column_list" />,id as rId,'region' as node_type
+		from regions
+		where id = #{id}
+	</select>
+	<delete id="removeRegions">
+		delete from regions
+		where id = #{id}
+	</delete>
+	<update id="updateRegions">
+	   update regions set region_name=#{regionName},region_description=#{regionDescription}
+	   where id=#{id}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from regions  
+		<where>
+			<if test=" f.phoneRegion == null || f.phoneRegion == '' ">
+				and region_name != '手机通道'
+			</if>
+			<if test="f.regionName != null and f.regionName != '' ">
+				and region_name like CONCAT('%',#{f.regionName},'%')
+			</if>
+			<if test="f.regionDescription != null and f.regionDescription != '' ">
+				and region_description like CONCAT('%',#{f.regionDescription},'%')
+			</if>
+			<if test="f.parentIdFrom != null and f.parentIdFrom != '' ">
+				and parent_id &gt;=#{f.parentIdFrom}
+			</if>
+			<if test="f.parentIdEnd != null and f.parentIdEnd != '' ">
+				and parent_id &lt;= #{f.parentIdEnd}
+			</if>
+			<if test="f.regionLevelFrom != null and f.regionLevelFrom != '' ">
+				and region_level &gt;=#{f.regionLevelFrom}
+			</if>
+			<if test="f.regionLevelEnd != null and f.regionLevelEnd != '' ">
+				and region_level &lt;= #{f.regionLevelEnd}
+			</if>
+			<if test="f.regionSortFrom != null and f.regionSortFrom != '' ">
+				and region_sort &gt;=#{f.regionSortFrom}
+			</if>
+			<if test="f.regionSortEnd != null and f.regionSortEnd != '' ">
+				and region_sort &lt;= #{f.regionSortEnd}
+			</if>
+			<if test=" f.searchCodeIn != null  and f.searchCodeIn != '' ">
+				and search_code in (${f.searchCodeIn})
+			</if>
+		</where>
+		order by region_sort asc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="queryAllRegions" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from regions  where is_deleted = 0
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(id)
+		from regions 
+		<where>
+		    <if test=" f.phoneRegion == null || f.phoneRegion == '' ">
+				and region_name != '手机通道'
+			</if>
+			<if test="f.regionName != null and f.regionName != '' ">
+				and region_name like CONCAT('%',#{f.regionName},'%')
+			</if>
+			<if test="f.regionDescription != null and f.regionDescription != '' ">
+				and region_description like CONCAT('%',#{f.regionDescription},'%')
+			</if>
+			<if test="f.parentIdFrom != null and f.parentIdFrom != '' ">
+				and parent_id &gt;=#{f.parentIdFrom}
+			</if>
+			<if test="f.parentIdEnd != null and f.parentIdEnd != '' ">
+				and parent_id &lt;= #{f.parentIdEnd}
+			</if>
+			<if test="f.regionLevelFrom != null and f.regionLevelFrom != '' ">
+				and region_level &gt;=#{f.regionLevelFrom}
+			</if>
+			<if test="f.regionLevelEnd != null and f.regionLevelEnd != '' ">
+				and region_level &lt;= #{f.regionLevelEnd}
+			</if>
+			<if test="f.regionSortFrom != null and f.regionSortFrom != '' ">
+				and region_sort &gt;=#{f.regionSortFrom}
+			</if>
+			<if test="f.regionSortEnd != null and f.regionSortEnd != '' ">
+				and region_sort &lt;= #{f.regionSortEnd}
+			</if>
+			<if test=" f.searchCodeIn != null  and f.searchCodeIn != '' ">
+				and search_code in (${f.searchCodeIn})
+			</if>
+		</where>
+	</select>
+	<select id="queryRegionByParentId" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from regions
+		<where>
+			<if test="regionName != null and regionName != '' ">
+				and region_name =#{regionName}
+			</if>
+			<if test="parentId != null and parentId != '' ">
+				and parent_id =#{parentId}
+			</if>
+			<if test="id !=null and id !=0 ">
+			    and id <![CDATA[ <> ]]> #{id}
+			</if>
+			
+		</where>
+	</select>
+	<select id="queryRegionAndChannel" resultMap="resultMap">
+		select t.* from (select r.id,r.region_name,r.region_level,r.parent_id,r.region_sort,region_description,r.search_code,
+		(select group_concat(uuid order by convert(channel_name using gbk) asc) from channel c where r.id=c.region_id and c.is_del=0 
+		and (( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and c.org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and c.org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and c.org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and c.org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and c.org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and c.is_private=0
+			</if>
+			)
+			<if test="f.isSuperAdmin != null and f.isSuperAdmin != '' ">
+				or 1 = #{f.isSuperAdmin}
+			</if>
+			or c.org_id = #{f.orgId}
+			or c.uuid in (select object_id from sys_org_object soo where soo.org_id=#{f.orgId} and object_type='CN')
+			or c.uuid in (SELECT cn.uuid FROM channel cn,regions rg,sys_org_object oo WHERE cn.region_id = rg.id AND rg.id = oo.object_id AND oo.object_type = 'RG' AND oo.org_id = #{f.orgId} AND oo.oper_org_id = cn.org_id))
+		order by c.channel_name asc) as channeUuidlStr,
+		(select group_concat(channel_name order by convert(channel_name using gbk) asc) from channel c where r.id=c.region_id and c.is_del=0 
+		and(( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and c.org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and c.org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and c.org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and c.org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and c.org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and c.is_private=0
+			</if>
+			)
+			<if test="f.isSuperAdmin != null and f.isSuperAdmin != '' ">
+				or 1 = #{f.isSuperAdmin}
+			</if>
+			or c.org_id = #{f.orgId}
+			or c.uuid in (select object_id from sys_org_object soo where soo.org_id=#{f.orgId} and object_type='CN')
+			or c.uuid in (SELECT cn.uuid FROM channel cn,regions rg,sys_org_object oo WHERE cn.region_id = rg.id AND rg.id = oo.object_id AND oo.object_type = 'RG' AND oo.org_id = #{f.orgId} AND oo.oper_org_id = cn.org_id))
+			
+		order by c.channel_name asc) as channelNameStr,
+		(select group_concat(region_id) from channel c where r.id=c.region_id) as channelRegionIdStr,
+		(select group_concat(id) from regions rr where r.id=rr.parent_id) as childRegionIdStr,
+		(select group_concat(parent_id) from regions rr where r.id=rr.parent_id) as childRegionParentIdStr,
+		(select group_concat(region_name) from regions rr where r.id=rr.parent_id) as childRegionNameStr,
+		(select count(1) from channel c where c.search_code like CONCAT(r.search_code,'%')) as channelCount
+		from regions r) t where 1=1
+		<if test="f.channelName != null and f.channelName != '' ">
+		    and t.channelNameStr like CONCAT('%',#{f.channelName},'%')
+		</if>
+		<if test="f.regionId!= null and f.regionId != '' ">
+				and t.id = #{f.regionId}
+		</if>
+		<if test="f.regionLevel!= null and f.regionLevel != '' ">
+				and t.region_level = #{f.regionLevel}
+		</if>
+		<if test="f.queryPhone!= null and f.queryPhone != '' ">
+				and t.region_name != '手机通道'
+		</if>
+		order by convert(t.region_name using gbk) asc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	
+	<select id="queryRegionAndChannelCount" resultType="int">
+		select count(*) from (select r.id,r.region_name,r.region_level,r.parent_id,r.region_sort,region_description,r.search_code,
+		(select group_concat(uuid) from channel c where r.id=c.region_id  and c.is_del=0
+		and (( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and c.org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and c.org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and c.org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and c.org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and c.org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and c.is_private=0
+			</if>
+			)
+			<if test="f.isSuperAdmin != null and f.isSuperAdmin != '' ">
+				or 1 = #{f.isSuperAdmin}
+			</if>
+			or c.org_id = #{f.orgId}
+			or c.uuid in (select object_id from sys_org_object soo where soo.org_id=#{f.orgId} and object_type='CN')
+			or c.uuid in (SELECT cn.uuid FROM channel cn,regions rg,sys_org_object oo WHERE cn.region_id = rg.id AND rg.id = oo.object_id AND oo.object_type = 'RG' AND oo.org_id = #{f.orgId} AND oo.oper_org_id = cn.org_id))
+		
+		) as channeUuidlStr,
+		(select group_concat(channel_name) from channel c where r.id=c.region_id  and c.is_del=0
+		and (( 1=1 
+			<if test="f.orgId1 != null and f.orgId1 != '' ">
+				and c.org_id1 = #{f.orgId1}
+			</if>
+			<if test="f.orgId2 != null and f.orgId2 != '' ">
+				and c.org_id2 = #{f.orgId2}
+			</if>
+			<if test="f.orgId3 != null and f.orgId3 != '' ">
+				and c.org_id3 = #{f.orgId3}
+			</if>
+			<if test="f.orgId4 != null and f.orgId4 != '' ">
+				and c.org_id4 = #{f.orgId4}
+			</if>
+			<if test="f.orgId5 != null and f.orgId5 != '' ">
+				and c.org_id5 = #{f.orgId5}
+			</if>
+			<if test="f.orgId != null and f.orgId != '' ">
+				and c.is_private=0
+			</if>
+			)
+			<if test="f.isSuperAdmin != null and f.isSuperAdmin != '' ">
+				or 1 = #{f.isSuperAdmin}
+			</if>
+			or c.org_id = #{f.orgId}
+			or c.uuid in (select object_id from sys_org_object soo where soo.org_id=#{f.orgId} and object_type='CN')
+			or c.uuid in (SELECT cn.uuid FROM channel cn,regions rg,sys_org_object oo WHERE cn.region_id = rg.id AND rg.id = oo.object_id AND oo.object_type = 'RG' AND oo.org_id = #{f.orgId} AND oo.oper_org_id = cn.org_id))
+		) as channelNameStr,
+		(select group_concat(region_id) from channel c where r.id=c.region_id) as channelRegionIdStr,
+		(select group_concat(id) from regions rr where r.id=rr.parent_id) as childRegionIdStr,
+		(select group_concat(parent_id) from regions rr where r.id=rr.parent_id) as childRegionParentIdStr,
+		(select group_concat(region_name) from regions rr where r.id=rr.parent_id) as childRegionNameStr
+		from regions r) t where 1=1
+		<if test="f.channelName != null and f.channelName != '' ">
+				and t.channelNameStr like CONCAT('%',#{f.channelName},'%')
+		</if>
+		<if test="f.regionId!= null and f.regionId != '' ">
+				and t.id = #{f.regionId}
+		</if>
+		<if test="f.regionLevel!= null and f.regionLevel != '' ">
+				and t.region_level = #{f.regionLevel}
+		</if>
+		<if test="f.queryPhone!= null and f.queryPhone != '' ">
+				and t.region_name != '手机通道'
+		</if>
+	</select>
+	<select id="queryMaxCodeByLevel" resultMap="resultMap">
+		select 
+		<include refid="column_list" />
+		from regions where region_level = #{level} and parent_id=#{parentId}
+		order by search_code desc limit 1 
+	</select>
+	
+	<select id="queryMaxSortByParentId" resultMap="resultMap">
+		select 
+		<include refid="column_list" />
+		from regions where parent_id = #{parentId} and id <![CDATA[<>]]> #{id}
+		order by region_sort desc limit 1 
+	</select>
+	
+	<select id="queryRegionBootCodeByName" resultMap="resultMap">
+		select id as rId,region_name,parent_id,state,node_type,search_code,left(search_code,4) as left_code from v_region_channel where 1=1
+		<if test="name!= null and name != '' ">
+			and region_name like CONCAT('%',#{name},'%')
+		</if>
+		group by left_code
+	</select>
+	
+	<select id="queryRegionTree" resultMap="resultMap">
+		select id as rId,region_name,parent_id,state,node_type,search_code from v_region_channel where 1=1
+		<if test="rId== 0 or rId == '0' ">
+			and parent_id is null
+		</if>
+		<if test="rId!= 0 and rId != '0' ">
+			and parent_id = #{rId}
+		</if>
+	</select>
+	<select id="queryRegionByCode" resultMap="resultMap">
+		select 
+		<include refid="column_list" />
+		from regions where search_code = #{searchCode} 
+	</select>
+	
+	<select id="queryRegionListByCode" resultMap="resultMap">
+		select 
+		<include refid="column_list" />
+		from regions where  1=1 and search_code in
+		<foreach collection="codeMap.keys" index="index" item="item" open="(" separator="," close=")">
+              #{item}       
+        </foreach>  
+	</select>
+
+	<!-- 根据任务id查询区域信息 -->
+	<select id="queryByJobs" resultMap = "resultMap">
+		SELECT
+			r.id,r.region_name,r.search_code
+		FROM
+			regions r
+		where
+			r.id in (${regionIds})
+	</select>
+	
+	<select id="queryChildRegionAndChannel" resultMap="resultMap">
+		select t.id,t.region_name,t.region_level,t.search_code,t.channeUuidlStr,t.childRegionIdStr from (select r.id,r.region_name,r.region_level,r.search_code,
+		(select group_concat(uuid) from channel c where r.id=c.region_id and c.is_del=0 order by c.channel_name asc) as channeUuidlStr,
+		(select group_concat(id) from regions rr where r.id=rr.parent_id) as childRegionIdStr
+		from regions r) t where 1=1 
+		<if test="regionId!= null and regionId != '' ">
+				and t.id = #{regionId}
+		</if>
+	</select>
+	<select id="queryPhoneRegion" resultMap="resultMap">
+		select <include refid="column_list" />
+		from regions where region_name = '手机通道'
+	</select>
+	<!-- 根据任务查询关联的通道所属的一级区域的名称 -->
+	<select id="queryOneLevelNameByJobs" resultMap="resultMap">
+		SELECT
+			DISTINCT r.region_name,r.id
+		FROM
+			job_channel jc,
+			channel c,
+			regions r
+		WHERE
+			jc.job_id = #{jobsId}
+			and jc.channel_id = c.uuid 
+			and LEFT(c.search_code,4) = r.search_code
+	</select>
+	
+  <resultMap id="retMap" type="com.sensing.core.bean.Regions">
+		<id column="id" property="id" />
+		<id column="region_name" property="regionName" />
+		<id column="region_description" property="regionDescription" />
+		<id column="parent_id" property="parentId" />
+		<id column="region_level" property="regionLevel" />
+		<id column="region_sort" property="regionSort" />
+		<id column="search_code" property="searchCode" />
+	</resultMap>
+	<select id="queryRegionByChannelId" resultMap="retMap">
+	    select
+             rg.id,rg.region_name,rg.region_description,rg.parent_id,rg.region_level,rg.region_sort,rg.search_code
+		from channel ch left join regions rg on ch.region_id=rg.id
+		where ch.uuid=#{channelId} and ch.is_del='0'
+	</select>
+	
+	<select id="queryChildsById" resultMap="resultMap">
+		select t.rId,t.region_name,t.parent_id,t.node_type,t.search_code,t.channelCount from 
+		(select r.id as rId,r.region_name as region_name,r.parent_id as parent_id,0 as node_type,r.search_code,(select count(*) from channel c where is_del=0 and c.search_code like  CONCAT(r.search_code,'%')) as channelCount from regions r
+		 where 1=1
+		 <choose>
+		 	<when test="isDeleted == null or isDeleted == '' ">
+		 		and  (r.is_deleted=0 or r.is_deleted is NULL)
+		 	</when>
+		 	<otherwise>
+		 		UNION
+   			SELECT uuid as rId,channel_name as region_name,region_id as parent_id,1 as node_type,search_code,0 from channel where is_del=1 
+   		    and reserved=9  
+			and uuid in (select channel_uuid from task_channel)
+		 	</otherwise>
+		 </choose>
+		UNION
+		select uuid as rId,channel_name as region_name,region_id as parent_id,1 as node_type,search_code,0  from channel where is_del!=1
+		
+		) as t
+		where 1=1
+		<choose>
+        	<when test="regionId!= null and regionId != '' ">
+            	and t.parent_id=#{regionId}
+        	</when>
+        	<otherwise>
+            	and t.parent_id=0
+        	</otherwise>
+    	</choose>
+		order by convert(t.region_name USING gbk) COLLATE gbk_chinese_ci
+	</select>
+	
+	<resultMap type="com.sensing.core.bean.RegionsTree" id="recursionMenuMap">
+        <id column="id" property="id" />
+        <id column="region_name" property="regionName" />
+        <id column="parent_id" property="parentId" />
+        <id column="node_type" property="nodeType" />
+        <collection property="children" ofType="com.sensing.core.bean.RegionsTree" javaType="java.util.ArrayList" column="id" select="findMenuByParentId"/>
+    </resultMap>
+
+    <select id="findAllRecursion" resultMap="recursionMenuMap">
+        SELECT id as id,region_name,parent_id,0 as node_type  FROM regions WHERE parent_id ="0"
+    </select>
+
+    <select id="findMenuByParentId" resultMap="recursionMenuMap">
+        SELECT id as rId,region_name,parent_id,0 as node_type FROM regions WHERE parent_id = #{Id} 
+        UNION
+		select uuid as id,channel_name as region_name,region_id as parent_id,1 as node_type  from channel where region_id=#{id}
+    </select>
+    <select id="queryAllChilds" resultMap="resultMap">
+        select  rId,region_name,parent_id,node_type, state,region_description,create_time  from
+        (
+        SELECT id as rId,region_name,parent_id,0 as node_type,-1 as state,search_code as modify_time,region_description,0 as create_time FROM regions
+        <choose>
+		 	<when test="del == null or del == '' ">
+
+		 		where   (is_deleted=0 or is_deleted is NULL)
+		 	</when>
+		 	<otherwise>
+
+			 	UNION
+	   			select uuid as id,channel_name as region_name,region_id as parent_id,1 as node_type ,cap_stat as state,modify_time,channel_description as region_description , create_time 
+	   			from channel 
+	   			where is_del=1 
+		   		    and reserved=9  
+					and uuid in (select channel_uuid from task_channel)
+		 	</otherwise>
+		 </choose>
+         UNION
+		select uuid as id,channel_name as region_name,region_id as parent_id,1 as node_type,cap_stat as state,modify_time,channel_description as region_description,create_time from channel where (is_del=0 or is_del is null)
+		) as li
+		ORDER BY li.node_type,li.state desc,li.modify_time desc,region_name
+    </select>
+</mapper>

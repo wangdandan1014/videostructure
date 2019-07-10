@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysUserDAO">
+    <resultMap id="resultMap" type="com.sensing.core.bean.SysUser">
+        <id column="uuid" property="uuid"/>
+        <id column="username" property="username"/>
+        <id column="password" property="password"/>
+        <id column="realname" property="realname"/>
+        <id column="email" property="email"/>
+        <id column="mobile" property="mobile"/>
+        <id column="add_uid" property="addUid"/>
+        <id column="add_uname" property="addUname"/>
+        <id column="add_time" property="addTime"/>
+        <id column="last_login_time" property="lastLoginTime"/>
+        <id column="login_count" property="loginCount"/>
+        <id column="state" property="state"/>
+        <id column="description" property="description"/>
+        <id column="org_id" property="orgId"/>
+        <id column="org_name" property="orgName"/>
+        <id column="is_admin" property="isAdmin"/>
+        <id column="login_ip" property="loginIp"/>
+        <id column="is_deleted" property="isDeleted"/>
+        <association property="roleName" column="uuid"
+                     select="com.sensing.core.dao.ISysUserDAO.getRoleNameByUserId"/>
+        <association property="roleId" column="uuid"
+                     select="com.sensing.core.dao.ISysUserDAO.getRoleId"/>
+    </resultMap>
+    <sql id="column_list_alis">
+		u.uuid,u.username,u.login_ip,u.password,u.realname,u.email,u.mobile,u.add_uid,u.add_time,u.last_login_time,u.login_count,u.state,u.description,u.org_id,u.is_admin
+	</sql>
+    <insert id="saveSysUser">
+	   insert into sys_user(uuid,username,password,realname,email,mobile,add_uid,add_time,last_login_time,login_count,state,description,org_id,is_admin,login_ip,is_deleted)
+	   values(
+		   #{uuid},#{username},#{password},#{realname},#{email},#{mobile},#{addUid},#{addTime},#{lastLoginTime},#{loginCount},#{state},#{description},#{orgId},#{isAdmin},#{loginIp},#{isDeleted}
+	   )
+	</insert>
+    <select id="getSysUser" resultMap="resultMap">
+		select
+		u.uuid,u.login_ip,u.username,u.password,u.realname,u.email,u.mobile,u.add_uid,u.add_time,u.last_login_time,u.login_count,u.state,u.description,u.org_id,u.is_admin,uu.realname as add_uname
+		from sys_user u 
+		left join sys_user uu on u.add_uid=uu.uuid where u.uuid = #{uuid}
+	</select>
+
+    <select id="getLoginUser" resultMap="resultMap">
+        select
+        <include refid="column_list_alis"/>
+        from sys_user u where
+        binary username = #{username}
+        and binary password =#{password} and is_deleted=0
+    </select>
+    <select id="loginIsDel" resultMap="resultMap">
+        select
+        <include refid="column_list_alis"/>
+        from sys_user u where
+        binary username = #{username}
+        and binary password =#{password} and is_deleted=1
+    </select>
+    <select id="queryUserByUserName" resultMap="resultMap">
+        select
+        <include refid="column_list_alis"/>
+        from sys_user u
+        where (u.is_deleted=0 or u.is_deleted is null)
+        <if test="username != null and username != '' ">
+            and binary username = #{username}
+        </if>
+        <if test="id != null and id !='' ">
+            and u.uuid !=#{id}
+        </if>
+    </select>
+    <delete id="removeSysUser">
+		delete from sys_user
+		where uuid = #{uuid}
+	</delete>
+    <update id="updateSysUser">
+        update sys_user
+        <set>
+            <if test="username !=null">
+                username=#{username},
+            </if>
+                realname=#{realname},
+            <if test="password !=null ">
+                password=#{password},
+            </if>
+            <if test="mobile!=null">
+                mobile=#{mobile},
+            </if>
+            <if test="addUid !=null">
+                add_uid=#{addUid},
+            </if>
+            <if test="addTime !=null ">
+                add_time=#{addTime},
+            </if>
+            <if test="loginCount !=null ">
+                login_count=#{loginCount},
+            </if>
+            <if test="state!=null ">
+                state=#{state},
+            </if>
+
+            <if test="description !=null ">
+                description=#{description},
+            </if>
+            <if test="isAdmin !=null  ">
+                is_admin=#{isAdmin},
+            </if>
+            <if test="loginIp !=null  ">
+                login_ip=#{loginIp},
+            </if>
+            <if test="isDeleted !=null">
+                is_deleted=#{isDeleted},
+            </if>
+            last_login_time=now()
+        </set>
+        where uuid=#{uuid}
+    </update>
+    <!--<select id="queryUse111r" resultMap="resultMap">-->
+    <!--select-->
+    <!--<include refid="column_list_alis"/>-->
+    <!--from sys_user u-->
+    <!--left join sys_user uu on u.add_uid=uu.uuid-->
+    <!--left join sys_user_role sr on u.uuid=sr.user_uuid-->
+    <!--where (u.is_deleted =0 or u.is_deleted is NULL)-->
+    <!--<if test="f.name != null and f.name != '' ">-->
+    <!--and( binary u.username like CONCAT('%',#{f.name},'%')-->
+    <!--or u.mobile like CONCAT('%',#{f.name},'%'))-->
+    <!--</if>-->
+    <!--<if test="f.roleId != null and f.roleId != '' ">-->
+    <!--and sr.role_id=#{f.roleId}-->
+    <!--</if>-->
+    <!--order by u.add_time desc-->
+    <!--<if test="pageFlag != null and pageFlag == 'pageFlag'">-->
+    <!--LIMIT #{beginCount},#{pageRows}-->
+    <!--</if>-->
+    <!--</select>-->
+    <select id="queryUserByRoleId" resultMap="resultMap">
+        select
+        <include refid="column_list_alis"/>
+        from sys_user u,
+        sys_user_role sr
+        where u.uuid = sr.user_uuid
+        and (u.is_deleted =0 or u.is_deleted is NULL)
+        and sr.role_id = #{roleId}
+
+    </select>
+    <!--lxh 返回类型是resultMap, 注意有两个子查询-->
+    <select id="queryUser" resultMap="resultMap">
+        SELECT distinct u.uuid,
+        u.username,
+        u.login_ip,
+        u.password,
+        u.realname,
+        u.email,
+        u.mobile,
+        u.add_uid,
+        u.add_time,
+        u.last_login_time,
+        u.login_count,
+        u.state,
+        u.description,
+        u.org_id,
+        u.is_admin
+        FROM sys_user u
+        LEFT JOIN sys_user_role sur on u.uuid = sur.user_uuid
+        where u.is_deleted !=1
+        <if test="f.roleId != null and f.roleId != '' ">
+            and sur.role_id = #{f.roleId}
+        </if>
+        <if test="f.name != null and f.name != '' ">
+            and LOCATE( CONCAT(#{f.name}),u.username)>0
+        </if>
+        <if test="f.nameOrMobile != null and f.nameOrMobile != '' ">
+            and (  u.username like CONCAT('%',#{f.nameOrMobile},'%') or u.mobile like CONCAT('%',#{f.nameOrMobile},'%') ) 
+        </if>
+        <if test="f.uuId != null and f.uuId != '' and f.isAdmin == 0 ">
+            and u.add_uid = #{f.uuId}
+        </if>
+        order by u.add_time desc
+        <if test="pageFlag != null and pageFlag == 'pageFlag'">
+            LIMIT #{beginCount},#{pageRows}
+        </if>
+    </select>
+    <select id="queryCount" resultType="int">
+
+        SELECT count(distinct u.uuid)
+        FROM sys_user u
+        LEFT JOIN sys_user_role sur on u.uuid = sur.user_uuid
+        where u.is_deleted !=1
+        <if test="f.roleId != null and f.roleId != '' ">
+            and sur.role_id = #{f.roleId}
+        </if>
+        <if test="f.name != null and f.name != '' ">
+            and LOCATE( CONCAT(#{f.name}),u.username)>0
+        </if>
+		<if test="f.nameOrMobile != null and f.nameOrMobile != '' ">
+            and (  u.username like CONCAT('%',#{f.nameOrMobile},'%') or u.mobile like CONCAT('%',#{f.nameOrMobile},'%') ) 
+        </if>
+        <if test="f.uuId != null and f.uuId != '' and f.isAdmin == 0 ">
+            and u.add_uid = #{f.uuId}
+        </if>
+
+    </select>
+
+    <select id="selectCount" resultType="int">
+        select
+        count(uuid)
+        from sys_user
+        <where>
+            <if test="f.username != null and f.username != '' ">
+                and binary username like CONCAT('%',#{f.username},'%')
+            </if>
+            <if test="f.password != null and f.password != '' ">
+                and binary password like CONCAT('%',#{f.password},'%')
+            </if>
+            <if test="f.realname != null and f.realname != '' ">
+                and realname like CONCAT('%',#{f.realname},'%')
+            </if>
+            <if test="f.email != null and f.email != '' ">
+                and email like CONCAT('%',#{f.email},'%')
+            </if>
+            <if test="f.mobile != null and f.mobile != '' ">
+                and mobile like CONCAT('%',#{f.mobile},'%')
+            </if>
+            <if test="f.addUid != null and f.addUid != '' ">
+                and add_uid like CONCAT('%',#{f.addUid},'%')
+            </if>
+            <if test="f.addTimeFrom != null and f.addTimeFrom != '' ">
+                and add_time &gt;=#{f.addTimeFrom}
+            </if>
+            <if test="f.addTimeEnd != null and f.addTimeEnd != '' ">
+                and add_time &lt;= #{f.addTimeEnd}
+            </if>
+            <if test="f.lastLoginTimeFrom != null and f.lastLoginTimeFrom != '' ">
+                and last_login_time &gt;=#{f.lastLoginTimeFrom}
+            </if>
+            <if test="f.lastLoginTimeEnd != null and f.lastLoginTimeEnd != '' ">
+                and last_login_time &lt;= #{f.lastLoginTimeEnd}
+            </if>
+            <if test="f.loginCountFrom != null and f.loginCountFrom != '' ">
+                and login_count &gt;=#{f.loginCountFrom}
+            </if>
+            <if test="f.loginCountEnd != null and f.loginCountEnd != '' ">
+                and login_count &lt;= #{f.loginCountEnd}
+            </if>
+            <if test="f.orgId != null and f.orgId != '' ">
+                and u.org_id = #{f.orgId}
+            </if>
+            <if test="f.isAdmin != null and f.isAdmin != '' ">
+                and u.is_admin = #{f.isAdmin}
+            </if>
+            and state in (0,1)
+        </where>
+    </select>
+    <select id="getRoleNameByUser" resultType="String">
+		SELECT GROUP_CONCAT( r.role_name SEPARATOR ",") as role_name
+		FROM sys_role r
+		inner join sys_user_role ur on r.id=ur.role_id
+		inner join sys_user u on ur.user_uuid=u.uuid
+		where u.uuid=#{create_user}
+		GROUP BY ur.user_uuid
+	</select>
+    <select id="getRoleNameByUserId" resultType="String">
+		SELECT GROUP_CONCAT( r.role_name SEPARATOR ",") as role_name
+		FROM sys_role r
+		inner join sys_user_role ur on r.id=ur.role_id
+	 	where ur.user_uuid=#{uuid}
+	 	and r.id != '2'
+		GROUP BY ur.user_uuid
+	</select>
+    <insert id="saveUserRoleo">
+        insert into sys_user_role(user_uuid, role_id)
+        values
+        <foreach collection="roleId" item="item" index="index" separator=",">
+            (
+            #{id}, #{item}
+
+            )
+        </foreach>
+    </insert>
+    <delete id="deleteUserRoleo">
+		delete from sys_user_role where user_uuid=#{uuid}
+	</delete>
+    <select id="getRoleId" resultType="string">
+		select role_id from sys_user_role
+		where user_uuid=#{uuid}
+	</select>
+
+    <select id="getRoleByUserUId" resultType="com.sensing.core.bean.SysUserRoleDesc" parameterType="java.util.List">
+        select sur.role_id, sur.user_uuid, sr.role_name
+        from sys_user_role sur inner join sys_role sr
+        where sur.role_id = sr.id
+        and sur.user_uuid in
+        <foreach item="item" index="index" collection="list" open="("
+                 separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="getUserHaveRatify"   resultType="com.sensing.core.bean.SysUser">
+        select distinct (su.uuid), su.username
+        from sys_user su
+               left join sys_user_role sur on su.uuid = sur.user_uuid
+        where sur.role_id in(select distinct (srr.role_id) from sys_role_reso srr where srr.reso_id = #{id} and srr.is_del = 0 )
+        <if test="userUuid != null and userUuid != '' ">
+            and su.uuid !=#{userUuid}
+        </if>
+        and su.is_deleted = 0 and su.state = 1
+
+    </select>
+
+    <select id="getCountByRoleId" resultType="java.lang.Integer">
+        select count(*) from sys_user_role sur where sur.role_id =#{roleId}
+    </select>
+
+</mapper>

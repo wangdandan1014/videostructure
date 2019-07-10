@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.clickhouseDao.INonmotorVehicleCKDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.NonmotorVehicle">
+	</resultMap>
+	<insert id="saveNonmotorVehicle">
+	   insert into NonmotorVehicle(uuid, deviceId, capTime, capDate, frameTime,capFlag, orientation, vehicleColor, vehicleClass, motion, genderCode, age, cap, glass, respirator, coatColor, coatLength, coatTexture, capLocation, capUrl, seceneUrl, taskIds)
+	   values(
+		   #{nonmotorVehicle.uuid,jdbcType=VARCHAR},#{nonmotorVehicle.deviceId,jdbcType=VARCHAR},#{nonmotorVehicle.capTime,jdbcType=BIGINT},
+		   #{nonmotorVehicle.capDate,jdbcType=DATE},#{nonmotorVehicle.frameTime,jdbcType=BIGINT},#{nonmotorVehicle.capFlag,jdbcType=INTEGER},#{nonmotorVehicle.orientation,jdbcType=INTEGER},#{nonmotorVehicle.vehicleColor,jdbcType=INTEGER},
+		   #{nonmotorVehicle.vehicleClass,jdbcType=INTEGER},#{nonmotorVehicle.motion,jdbcType=INTEGER},#{nonmotorVehicle.genderCode,jdbcType=INTEGER},#{nonmotorVehicle.age,jdbcType=INTEGER},
+		   #{nonmotorVehicle.cap,jdbcType=INTEGER},#{nonmotorVehicle.glass,jdbcType=INTEGER},#{nonmotorVehicle.respirator,jdbcType=INTEGER},#{nonmotorVehicle.coatColor,jdbcType=INTEGER},
+		   #{nonmotorVehicle.coatLength,jdbcType=INTEGER},#{nonmotorVehicle.coatTexture,jdbcType=INTEGER},#{nonmotorVehicle.capLocation,jdbcType=VARCHAR},
+		   #{nonmotorVehicle.capUrl,jdbcType=VARCHAR},#{nonmotorVehicle.seceneUrl,jdbcType=VARCHAR},#{taskIds}
+	   )
+	</insert>
+	<select id="queryByUuid" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, orientation, vehicleColor, vehicleClass, motion, 
+		genderCode, age, cap, glass, respirator, coatColor, coatLength, coatTexture, capLocation, 
+		capUrl, seceneUrl, taskIds from NonmotorVehicle where uuid = #{uuid}
+		<if test="capTime != null and capTime != '' ">
+			and capTime = #{capTime}
+		</if>
+	</select>
+	<select id="queryByUuids" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, orientation, vehicleColor, vehicleClass, motion, genderCode, age, cap, glass, respirator, coatColor, coatLength, coatTexture, capLocation, capUrl, seceneUrl, taskIds
+		 from NonmotorVehicle where uuid in 
+		 <foreach collection="uuids" item="uuid" index="index" open="(" separator="," close=")">
+	            #{uuid}
+		</foreach>
+	</select>
+	<select id="queryList" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, orientation, vehicleColor, vehicleClass, motion, genderCode, age, cap, glass, respirator, coatColor, coatLength, coatTexture, capLocation, capUrl, seceneUrl, taskIds from NonmotorVehicle
+		<where>
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null  ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+			
+			<if test="pager.m.vehicleColor != null  ">
+				and vehicleColor = #{pager.m.vehicleColor}
+			</if>
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass = #{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+			<if test="pager.m.photoWidthFrom != null and pager.m.photoWidthFrom != '' ">
+				and toUInt16(splitByString(',',capLocation)[3]) &gt;= #{pager.m.photoWidthFrom}
+			</if>
+			<if test="pager.m.photoWidthEnd != null and pager.m.photoWidthEnd != '' ">
+				and toUInt16(splitByString(',',capLocation)[3]) &lt; #{pager.m.photoWidthEnd}
+			</if>
+		</where>
+			order by capTime desc, frameTime asc
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select count(1) from NonmotorVehicle
+		<where>
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.vehicleColor != null  ">
+				and vehicleColor = #{pager.m.vehicleColor}
+			</if>
+			
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null  ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+			
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass = #{pager.m.vehicleClass}
+			</if>
+			
+			<if test="pager.m.capFlag != null  ">
+				and capFlag = #{pager.m.capFlag}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+			<if test="pager.m.photoWidthFrom != null and pager.m.photoWidthFrom != '' ">
+				and toUInt16(splitByString(',',capLocation)[3]) &gt;= #{pager.m.photoWidthFrom}
+			</if>
+			<if test="pager.m.photoWidthEnd != null and pager.m.photoWidthEnd != '' ">
+				and toUInt16(splitByString(',',capLocation)[3]) &lt; #{pager.m.photoWidthEnd}
+			</if>
+		</where>
+	</select>
+	
+	<select id="queryListByTaskId" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, orientation, vehicleColor, vehicleClass, motion, genderCode, age, cap, glass, respirator, coatColor, 
+		coatLength, coatTexture, capLocation, capUrl, seceneUrl, taskIds from (select  uuid, deviceId, capTime, frameTime,capFlag, orientation, vehicleColor,
+		 vehicleClass, motion, genderCode, age, cap, glass, respirator, coatColor, coatLength, coatTexture, capLocation, capUrl, seceneUrl, taskIds, 
+		 countEqual(taskIds,#{pager.f.taskId}) as taskId from NonmotorVehicle WHERE taskId =1 
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null  ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null  ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+			
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass = #{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.f.capUrl != null ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null  ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		 order by capTime desc 
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>) 
+	</select>
+	<select id="queryOffVideoListByTaskId" resultMap="resultMap">
+		select uuid, deviceId, capTime, frameTime,capFlag, orientation, vehicleColor, vehicleClass, motion, genderCode, age, cap, glass, respirator, coatColor, 
+		coatLength, coatTexture, capLocation, capUrl, seceneUrl, taskIds from (select  uuid, deviceId, capTime, frameTime,capFlag, orientation, vehicleColor,
+		 vehicleClass, motion, genderCode, age, cap, glass, respirator, coatColor, coatLength, coatTexture, capLocation, capUrl, seceneUrl, taskIds, 
+		 countEqual(taskIds,#{pager.f.taskId}) as taskId from NonmotorVehicle WHERE taskId =1 
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null  ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null  ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null  ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+			
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass = #{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.f.capUrl != null ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null  ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		 order by frameTime asc 
+		<if test="pager.pageFlag != null and pager.pageFlag == 'pageFlag'">
+			LIMIT #{pager.beginCount},#{pager.pageRows}
+		</if>) 
+	</select>
+	<select id="selectCountByTaskId" resultType="int">
+	select count( 1) from (select  countEqual(taskIds,#{pager.f.taskId}) as taskId from NonmotorVehicle 
+	WHERE taskId =1  
+			<if test="pager.f.uuid != null and pager.f.uuid != '' ">
+				and uuid = #{pager.f.uuid}
+			</if>
+			<if test="deviceIds != null  and deviceIds.size() > 0  ">
+				and deviceId in 
+				<foreach collection="deviceIds" item="deviceId" index="index" open="(" separator="," close=")">
+	            #{deviceId}
+				</foreach>
+			</if>
+			<if test="pager.m.startTime != null and pager.m.startTime != '' ">
+				and capTime &gt;=#{pager.m.startTime}
+			</if>
+			<if test="pager.m.endTime != null and pager.m.endTime != '' ">
+				and capTime &lt;= #{pager.m.endTime}
+			</if>
+			<if test="pager.m.age != null  ">
+				and age = #{pager.m.age}
+			</if>
+
+			<if test="pager.m.genderCode != null  ">
+				and genderCode = #{pager.m.genderCode}
+			</if>
+
+			<if test="pager.m.orientation != null  ">
+				and orientation =#{pager.m.orientation}
+			</if>
+
+			<if test="pager.m.motion != null  ">
+				and motion =#{pager.m.motion}
+			</if>
+
+			<if test="pager.m.cap != null  ">
+				and cap =#{pager.m.cap}
+			</if>
+
+			<if test="pager.m.respirator != null  ">
+				and respirator =#{pager.m.respirator}
+			</if>
+
+			<if test="pager.m.glass != null ">
+				and glass =#{pager.m.glass}
+			</if>
+
+			<if test="pager.m.coatColor != null  ">
+				and coatColor =#{pager.m.coatColor}
+			</if>
+
+			<if test="pager.m.coatLength != null  ">
+				and coatLength =#{pager.m.coatLength}
+			</if>
+
+			<if test="pager.m.coatTexture != null  ">
+				and coatTexture =#{pager.m.coatTexture}
+			</if>
+			
+			<if test="pager.m.vehicleClass != null  ">
+				and vehicleClass = #{pager.m.vehicleClass}
+			</if>
+
+			<if test="pager.f.capUrl != null and pager.f.capUrl != '' ">
+				and capUrl =#{pager.f.capUrl}
+			</if>
+			<if test="pager.f.videoUrl != null and pager.f.videoUrl != '' ">
+				and videoUrl =#{pager.f.videoUrl}
+			</if>
+		)
+	</select>
+
+</mapper>

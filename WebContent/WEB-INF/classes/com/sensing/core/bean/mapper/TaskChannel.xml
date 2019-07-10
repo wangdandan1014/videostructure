@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ITaskChannelDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.TaskChannel">
+		<id column="uuid" property="uuid" />
+		<id column="task_uuid" property="taskUuid" />
+		<id column="channel_uuid" property="channelUuid" />
+		<id column="finish_state" property="finishState" />
+		<id column="create_user" property="createUser" />
+		<id column="create_time" property="createTime" />
+		<id column="modify_user" property="modifyUser" />
+		<id column="modify_time" property="modifyTime" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,task_uuid,channel_uuid,finish_state,create_user,create_time,modify_user,modify_time
+	</sql>
+	<insert id="saveTaskChannel">
+		insert into
+		task_channel(uuid,task_uuid,channel_uuid,finish_state,create_user,create_time,modify_user,modify_time)
+		values(
+		#{uuid},#{taskUuid},#{channelUuid},#{finishState},#{createUser},now(),#{modifyUser},#{modifyTime}
+		)
+	</insert>
+	<select id="getTaskChannel" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from task_channel
+		where uuid = #{uuid}
+	</select>
+	<select id="getTaskChannelByChannelUuid" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from task_channel
+		where channel_uuid = #{channelUuid}
+	</select>
+	<delete id="removeTaskChannel">
+		delete from task_channel
+		where uuid = #{uuid}
+	</delete>
+	<delete id="removeTaskChannelByTaskId">
+		delete from task_channel
+		where task_uuid =
+		#{task_uuid}
+	</delete>
+	<update id="updateTaskChannel">
+		update task_channel set
+		task_uuid=#{taskUuid},channel_uuid=#{channelUuid},finish_state=#{finishState},create_user=#{createUser},create_time=#{createTime},modify_user=#{modifyUser},modify_time=#{modifyTime}
+		where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from task_channel
+		<where>
+			<if test="f.taskUuid != null and f.taskUuid != '' ">
+				and task_uuid like CONCAT('%',#{f.taskUuid},'%')
+			</if>
+			<if test="f.channelUuid != null and f.channelUuid != '' ">
+				and channel_uuid like CONCAT('%',#{f.channelUuid},'%')
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="java.lang.Integer">
+		select
+		count(uuid)
+		from task_channel
+		<where>
+			<if test="f.taskUuid != null and f.taskUuid != '' ">
+				and task_uuid like CONCAT('%',#{f.taskUuid},'%')
+			</if>
+			<if test="f.channelUuid != null and f.channelUuid != '' ">
+				and channel_uuid like CONCAT('%',#{f.channelUuid},'%')
+			</if>
+		</where>
+	</select>
+
+	<select id="getTaskChannelByTaskIds" parameterType="java.util.List" resultType="com.sensing.core.bean.TaskChannelResp">
+		SELECT
+			tc.uuid,
+			tc.task_uuid AS taskUuid,
+			tc.channel_uuid AS channelUuid,
+			tc.finish_state AS finishState,
+			c.channel_name,
+			c.cap_stat,
+			c.analysis_type as analysis_type,
+			t.analy_type as task_analy_type
+		FROM 
+			task_channel tc, channel c,task t
+		WHERE
+			tc.channel_uuid = c.uuid and t.uuid=tc.task_uuid and c.is_del!=1
+			AND tc.task_uuid in
+			<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		order by 
+			channel_uuid
+	</select>
+	<select id="getTaskChannelRespByTaskId"
+		parameterType="java.util.List"
+		resultType="com.sensing.core.bean.TaskChannelResp">
+		SELECT
+		tc.uuid,
+		tc.task_uuid AS taskUuid,
+		tc.channel_uuid AS
+		channelUuid,
+		c.channel_name,
+		c.cap_stat,
+		c.analysis_type as
+		analysis_type,
+		t.analy_type as task_analy_type
+		FROM task_channel tc,
+		channel c,task t
+		WHERE
+		tc.channel_uuid = c.uuid and t.uuid=tc.task_uuid
+		AND tc.task_uuid
+		= #{taskId}
+	</select>
+	<select id="getTaskChannelByTaskId" resultType="com.sensing.core.bean.TaskChannel">
+		SELECT
+			tc.uuid,
+			tc.task_uuid AS taskUuid,
+			tc.channel_uuid AS channelUuid,
+			tc.finish_state AS finishState
+		FROM 
+			task_channel tc
+		WHERE 
+			tc.task_uuid = #{taskId}
+	</select>
+	<select id="getTaskChannelByChannelIds"
+		parameterType="java.util.List"
+		resultType="com.sensing.core.bean.TaskChannel">
+		select
+		uuid,
+		task_uuid AS taskUuid,
+		channel_uuid AS channelUuid
+		from
+		task_channel
+		where channel_uuid
+		in
+		<foreach item="item" index="index" collection="list" open="("
+			separator="," close=")">
+			#{item}
+		</foreach>
+
+	</select>
+	<delete id="deleteByChannelId">
+		delete from task_channel where channel_uuid=#{uuid}
+	</delete>
+
+</mapper>

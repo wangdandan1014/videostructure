@@ -1,0 +1,213 @@
+package com.sensing.core.utils.task;
+
+
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import com.alibaba.fastjson.JSONObject;
+import com.sensing.core.bean.Channel;
+import com.sensing.core.bean.RpcLog;
+import com.sensing.core.bean.Task;
+import com.sensing.core.dao.IChannelDAO;
+import com.sensing.core.dao.IRpcLogDAO;
+import com.sensing.core.dao.ITaskDAO;
+import com.sensing.core.service.CaptureThriftService;
+import com.sensing.core.thrift.cap.bean.CapReturn;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.Pager;
+import com.sensing.core.utils.StringUtils;
+import com.sensing.core.utils.WebUtil;
+import com.sensing.core.utils.props.PropUtils;
+import com.sensing.core.utils.time.DateUtil;
+
+/**
+ * 定时任务：历史结构化任务
+ */
+@Component
+public class HistoryTimerTask {
+
+    private static final Log log = LogFactory.getLog(HistoryTimerTask.class);
+
+    @Resource
+    public ITaskDAO taskDAO;
+    @Resource
+    public IRpcLogDAO rpcLogDAO;
+    @Resource
+    public IChannelDAO channelDAO;
+    @Resource
+	public CaptureThriftService capThriftService;
+
+    /**
+     * 修改task状态的定时任务
+     */
+    public void startHistory() {
+        try {
+            log.info("~~~~~~ HistoryTimerTask ~~~~~~" + DateUtil.DateToString(new Date()));
+
+            // TODO: 2018/12/7 lxh  查询当前时间段有效的任务(type in (2)  is_del=0  state in（待启动,失败) )
+            List<Task> tasks = taskDAO.getHistoryUpdateStateTask(Arrays.asList(Constants.TASK_STAT_WAITSTART, Constants.TASK_STAT_FAILEE));
+
+            for (Task t : tasks) {
+                int newState = getHistoryState(t);
+                t.setNewState(newState);
+            }
+
+            //开始分析的
+            List<Task> runningList = tasks.stream().filter(j -> j.getState() != j.getNewState() && j.getNewState() == Constants.JOB_STATE_RUNNING).collect(Collectors.toList());
+            //通知开始分析历史视频
+            callHistoryTask(runningList);
+
+        } catch (Exception e) {
+            log.error(e.getMessage() + StringUtils.getStackTrace(e));
+            try {
+                setRPcLog(new RpcLog("定时任务", "失败", StringUtils.getStackTrace(e), 3));
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+        }
+
+
+    }
+
+    /**
+     * 通知抓拍开启历史结构化通道的抓拍
+     * @param taskList
+     * @author mingxingyu
+     * @date   2019年6月11日 上午9:41:48
+     */
+    public void callHistoryTask(List<Task> taskList) {
+        if (!CollectionUtils.isEmpty(taskList)) {
+        	String errorMsg = "";
+        	for (int i = 0; i < taskList.size(); i++) {
+        		Task task = taskList.get(i);
+        		try {
+	        		//查询历史任务关联的通道信息
+	        		Pager queryCon = new Pager();
+	        		queryCon.getF().put("isDel",Constants.DELETE_NO.toString());
+//	        		queryCon.getF().put("reserved",Constants.CHANNEL_RESERVER_GB28181_2011.toString());//国标标识的通道
+	        		queryCon.getF().put("taskUuid",task.getUuid());
+					List<Channel> channelList = channelDAO.queryByTaskUuid(queryCon);
+	        		
+	            	
+	            	for (int j = 0; j < channelList.size() ; j++) {
+	            		Channel channel = channelList.get(j);
+	            		try {
+			                
+			                //组装调用的参数
+			                JSONObject historyVideoJO = new JSONObject();
+			                historyVideoJO.put("taskId",task.getUuid());//任务ID，每次不同，因为国标码会重复，字符串
+			                historyVideoJO.put("deviceId",channel.getChannelNo());//国标通道的20位国标码，字符串
+			                historyVideoJO.put("videoStartTime",task.getAnalyBeginDate().getTime()/1000);//10位unix标准时间戳，开始时间，数字
+			                historyVideoJO.put("videoEndTime",task.getAnalyEndDate().getTime()/1000);//10位unix标准时间戳，结束时间，数字
+			                historyVideoJO.put("analyTime","");//开始检测时间，抓拍暂时未用到，数字
+			                historyVideoJO.put("analySpeed",task.getVideoSpeed());//每20帧检测一帧，数字
+			                historyVideoJO.put("enablePerson",task.getAnalyType().contains(Constants.CAP_ANALY_TYPE_PERSON.toString())?true:false);//检测行人，bool类型
+			                historyVideoJO.put("enableVehicle",task.getAnalyType().contains(Constants.CAP_ANALY_TYPE_MOTOR_VEHICLE.toString())?true:false);//检测机动车，bool类型
+			                historyVideoJO.put("enableNonmotor",task.getAnalyType().contains(Constants.CAP_ANALY_TYPE_NONMOTOR_VEHICLE.toString())?true:false);//检测非机动车, bool类型
+			                historyVideoJO.put("decodeType",channel.getReserved());//解码类型，5代表大华h265，大华的h265必须使用大华解码库，数字
+			                
+			                JSONObject paramsJO = new JSONObject();
+			                paramsJO.put("historyVideo",historyVideoJO);
+			                
+			                //调用抓拍通知
+			                long startTime = System.currentTimeMillis();
+			                CapReturn capReturn = capThriftService.NotifyMessage(109,paramsJO.toString());
+			                long endTime = System.currentTimeMillis();
+			                int res = capReturn.getRes();
+			                String msg = capReturn.getMsg();
+			                
+			                //日志的记录
+			                RpcLog rpcLog = null;
+			                if ( res == 0 ) {
+								log.info("通知抓拍开启历史结构化通道，该通道通知成功，通道uuid："+channel.getUuid());
+								rpcLog = new RpcLog(new Date(),"主动","历史结构化定时任务","通知抓拍打开通道","callHistoryTask","127.0.0.1",null,"thrift", (int)(endTime-startTime), "成功",paramsJO.toString(), "successful",Constants.RPC_LOG_TYPE_CAPSERVER);
+							}else{
+								log.error("通知抓拍开启历史结构化通道，该通道通知失败，通道uuid："+channel.getUuid()+"，失败的返回信息："+msg);
+								rpcLog = new RpcLog(new Date(),"主动","历史结构化定时任务","通知抓拍打开通道","callHistoryTask","127.0.0.1",null,"thrift", (int)(endTime-startTime), "失败",paramsJO.toString(), msg,Constants.RPC_LOG_TYPE_CAPSERVER);
+							}
+			                rpcLogDAO.saveRpcLog(rpcLog);
+	            		} catch (Exception e) {
+	            			errorMsg = StringUtils.getStackTrace(e).substring(0, 1000);
+	            			log.error("通知抓拍开启历史结构化通道发生异常，任务的uuid："+task.getUuid()+",通道的uuid：" +channel.getUuid()+"，错误信息："+ errorMsg);
+	            			e.printStackTrace();
+	            		}
+	            	}
+		            taskDAO.setUpdateStateTasks(taskList);
+        		} catch (Exception e) {
+        			log.error("通知抓拍开启历史结构化通道的抓拍发生异常，任务的uuid："+task.getUuid()+"，错误信息："+e.getMessage());
+        			e.printStackTrace();
+        		}
+        	}
+        }
+    }
+
+    /****
+     * 设置任务状态值
+     */
+    public int getHistoryState(Task task) {
+        int nowState = task.getState().intValue();
+        if (task.getState() == null || task.getType() == null) {
+            return nowState;
+        }
+//        if (StringUtils.isEmptyOrNull(task.getAnalyStartTime()) || task.getAnalyStartTime().split(":").length == 2) {
+//            return nowState;
+//        }
+        /****  得到任务状态  ***/
+        nowState = getTaskStateByDate(task, new Date(), 1);
+
+
+        return nowState;
+    }
+
+    /**
+     * 根据时间判断task的state值，注：该方法外部不可使用
+     */
+    private int getTaskStateByDate(Task task, Date nowDate, int type) {
+        int nowState = task.getState();
+//        java.text.SimpleDateFormat dayf = new java.text.SimpleDateFormat("yyyy-MM-dd");//设置日期格式
+        // 分析时间 大于 开始日期  还未到开始分析时间
+        long now = new Date().getTime();
+        long start = DateUtil.StringToDate(task.getAnalyStartTime()).getTime();
+        int distance = PropUtils.getInt("task.update.time");
+        if ((now < start) && ((start - now) > (distance * 60 * 1000))) {
+            return nowState;
+        }
+        return Constants.TASK_STAT_RUNNING;
+
+    }
+
+    /**
+     * 记录日志：修改任务状态值
+     *
+     * @Author: LXH
+     * @Date: 2018/9/14
+     */
+    public void setTaskRpcLog(List<Task> list) {
+        RpcLog rl = new RpcLog();
+        rl.setResult("成功");
+        rl.setRpcType("spring-history-task");
+        rl.setTodo("修改任务状态值");
+        rl.setType(Constants.RPC_LOG_TYPE_OPERATE);
+        rl.setMemo("历史结构化任务任务uuid：" + list.stream().map(t -> t.getUuid() + "，").collect(Collectors.toList()));
+        setRPcLog(rl);
+    }
+
+    public void setRPcLog(RpcLog rl) {
+        rl.setCallTime(new Date());
+        rl.setMode(Constants.INTERFACE_CALL_TYPE_INIT);
+        rl.setModule(Constants.SEVICE_MODEL_TASK);
+        rl.setIp(WebUtil.getLocalIP());
+        rpcLogDAO.saveRpcLog(rl);
+    }
+
+}
+

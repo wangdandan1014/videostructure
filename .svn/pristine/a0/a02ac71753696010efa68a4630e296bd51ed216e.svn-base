@@ -1,0 +1,164 @@
+package com.sensing.core.utils.task;
+
+
+import com.google.common.base.Joiner;
+import com.sensing.core.bean.*;
+import com.sensing.core.dao.IChannelDAO;
+import com.sensing.core.dao.IRpcLogDAO;
+import com.sensing.core.dao.ITaskChannelDAO;
+import com.sensing.core.dao.ITaskDAO;
+import com.sensing.core.service.impl.CaptureThriftServiceImpl;
+import com.sensing.core.service.impl.ChannelServiceImpl;
+import com.sensing.core.thrift.cap.bean.CapReturn;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.Pager;
+import com.sensing.core.utils.StringUtils;
+import com.sensing.core.utils.WebUtil;
+import com.sensing.core.utils.props.PropUtils;
+import com.sensing.core.utils.time.DateUtil;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
+import java.text.ParseException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.sensing.core.utils.Constants.TASK_STAT_RUNNING;
+
+/**
+ * 定时任务：历史结构化任务
+ */
+@Component
+public class HistoryTimerTask {
+
+    private static final Log log = LogFactory.getLog(HistoryTimerTask.class);
+
+    @Resource
+    public ITaskDAO taskDAO;
+    @Resource
+    public IRpcLogDAO rpcLogDAO;
+
+    /**
+     * 修改task状态的定时任务
+     */
+    public void startHistory() {
+        try {
+            log.info("~~~~~~ HistoryTimerTask ~~~~~~" + DateUtil.DateToString(new Date()));
+
+            // TODO: 2018/12/7 lxh  查询当前时间段有效的任务(type in (2)  is_del=0  state in（待启动,失败) )
+            List<Task> tasks = taskDAO.getHistoryUpdateStateTask(Arrays.asList(Constants.TASK_STAT_WAITSTART, Constants.TASK_STAT_FAILEE));
+
+            for (Task t : tasks) {
+                int newState = getHistoryState(t);
+                t.setNewState(newState);
+            }
+
+            //开始分析的
+            List<Task> runningList = tasks.stream().filter(j -> j.getState() != j.getNewState() && j.getNewState() == Constants.JOB_STATE_RUNNING).collect(Collectors.toList());
+            //通知开始分析历史视频
+            callHistoryTask(runningList);
+
+        } catch (Exception e) {
+            log.error(e.getMessage() + StringUtils.getStackTrace(e));
+            try {
+                setRPcLog(new RpcLog("定时任务", "失败", StringUtils.getStackTrace(e), 3));
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+        }
+
+
+    }
+
+    public void callHistoryTask(List<Task> taskList) {
+
+        if (!CollectionUtils.isEmpty(taskList)) {
+            int result = 1;
+            String errorMsg = "";
+            CapReturn capReturn = null;
+            try {
+                // TODO: 2018/12/7 lxh 通知抓拍当前要开始分析的任务
+                //更新历史视频的task状态
+                result = 1;
+            } catch (Exception e) {
+                errorMsg = StringUtils.getStackTrace(e).substring(0, 1000);
+                log.error("通知抓拍异常2===" + errorMsg);
+                result = 0;
+            }
+            if (result == 1) {
+                // TODO: 2018/12/12 通知抓拍成功
+            } else {
+                /***  通知抓拍异常 ****/
+                taskList.stream().forEach(t -> t.setNewState(Constants.TASK_STAT_FAILEE));
+            }
+            taskDAO.setUpdateStateTasks(taskList);
+            setTaskRpcLog(taskList);
+
+        }
+    }
+
+    /****
+     * 设置任务状态值
+     */
+    public int getHistoryState(Task task) {
+        int nowState = task.getState().intValue();
+        if (task.getState() == null || task.getType() == null) {
+            return nowState;
+        }
+        if (StringUtils.isEmptyOrNull(task.getAnalyStartTime()) || task.getAnalyStartTime().split(":").length == 2) {
+            return nowState;
+        }
+        /****  得到任务状态  ***/
+        nowState = getTaskStateByDate(task, new Date(), 1);
+
+
+        return nowState;
+    }
+
+    /**
+     * 根据时间判断task的state值，注：该方法外部不可使用
+     */
+    private int getTaskStateByDate(Task task, Date nowDate, int type) {
+        int nowState = task.getState();
+        java.text.SimpleDateFormat dayf = new java.text.SimpleDateFormat("yyyy-MM-dd");//设置日期格式
+        // 分析时间 大于 开始日期  还未到开始分析时间
+        long now = new Date().getTime();
+        long start = DateUtil.StringToDate(dayf.format(task.getAnalyBeginDate()) + " " + task.getAnalyStartTime()).getTime();
+        int distance = PropUtils.getInt("task.update.time");
+        if ((now < start) && ((start - now) > (distance * 60 * 1000))) {
+            return nowState;
+        }
+
+        return Constants.TASK_STAT_RUNNING;
+
+    }
+
+    /**
+     * 记录日志：修改任务状态值
+     *
+     * @Author: LXH
+     * @Date: 2018/9/14
+     */
+    public void setTaskRpcLog(List<Task> list) {
+        RpcLog rl = new RpcLog();
+        rl.setResult("成功");
+        rl.setRpcType("spring-history-task");
+        rl.setTodo("修改任务状态值");
+        rl.setType(Constants.RPC_LOG_TYPE_OPERATE);
+        rl.setMemo("历史结构化任务任务uuid：" + list.stream().map(t -> t.getUuid() + "，").collect(Collectors.toList()));
+        setRPcLog(rl);
+    }
+
+    public void setRPcLog(RpcLog rl) {
+        rl.setCallTime(new Date());
+        rl.setMode(Constants.INTERFACE_CALL_TYPE_INIT);
+        rl.setModule(Constants.SEVICE_MODEL_TASK);
+        rl.setIp(WebUtil.getLocalIP());
+        rpcLogDAO.saveRpcLog(rl);
+    }
+
+}
+

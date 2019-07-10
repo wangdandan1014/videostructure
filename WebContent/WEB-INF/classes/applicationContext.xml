@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
+	
+
+	<import resource="classpath:config/*.xml" />
+
+	<bean id="cacheAdministrator"
+		class="com.opensymphony.oscache.general.GeneralCacheAdministrator"
+		destroy-method="destroy">
+		<constructor-arg index="0">
+			<props>
+				<prop key="cache.memory">true</prop>
+			</props>
+		</constructor-arg>
+	</bean>
+	<bean id="SpringContextUtil" class="com.sensing.core.utils.ApplicationUtil" scope="singleton"></bean>
+
+    <!-- 生产环境配置文件 -->
+    <beans profile="product">
+        <context:property-placeholder location="classpath:properties/product/*.properties" />
+    </beans>
+
+    <!-- 开发环境配置文件 -->
+    <beans profile="dev">
+        <context:property-placeholder location="classpath:properties/dev/*.properties" />
+    </beans>
+
+
+</beans>

@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.INonmotorVehicleDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.NonmotorVehicle">
+		<id column="uuid" property="uuid" />
+		<id column="type" property="type" />
+		<id column="device_id" property="deviceId" />
+		<id column="cap_time" property="capTime" />
+		<id column="orientation" property="orientation" />
+		<id column="vehicle_color" property="vehicleColor" />
+		<id column="vehicle_class" property="vehicleClass" />
+		<id column="motion" property="motion" />
+		<id column="gender_code" property="genderCode" />
+		<id column="age" property="age" />
+		<id column="cap" property="cap" />
+		<id column="glass" property="glass" />
+		<id column="respirator" property="respirator" />
+		<id column="coat_color" property="coatColor" />
+		<id column="coat_length" property="coatLength" />
+		<id column="coat_texture" property="coatTexture" />
+		<id column="cap_url" property="capUrl" />
+		<id column="secene_url" property="seceneUrl" />
+		<id column="video_url" property="videoUrl" />
+		<id column="is_deleted" property="isDeleted" />
+		<id column="create_user" property="createUser" />
+		<id column="create_time" property="createTime" />
+		<id column="modify_user" property="modifyUser" />
+		<id column="modify_time" property="modifyTime" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,type,device_id,cap_time,orientation,vehicle_color,vehicle_class,motion,gender_code,age,cap,glass,respirator,coat_color,coat_length,coat_texture,cap_url,secene_url,video_url,is_deleted,create_user,create_time,modify_user,modify_time
+	</sql>
+	<insert id="saveNonmotorVehicle">
+	   insert into cap_nonmotor(uuid,type,device_id,cap_time,orientation,vehicle_color,vehicle_class,motion,gender_code,age,cap,glass,respirator,coat_color,coat_length,coat_texture,cap_url,secene_url,video_url,is_deleted,create_user,create_time,modify_user,modify_time)
+	   values(
+		   #{uuid},#{type},#{deviceId},#{capTime},#{orientation},#{vehicleColor},#{vehicleClass},#{motion},#{genderCode},#{age},#{cap},#{glass},#{respirator},#{coatColor},#{coatLength},#{coatTexture},#{capUrl},#{seceneUrl},#{videoUrl},#{isDeleted},#{createUser},#{createTime},#{modifyUser},#{modifyTime}
+	   )
+	</insert>
+	<select id="getNonmotorVehicle" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from cap_nonmotor
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeNonmotorVehicle">
+		delete from cap_nonmotor
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateNonmotorVehicle">
+	   update cap_nonmotor set type=#{type},device_id=#{deviceId},cap_time=#{capTime},orientation=#{orientation},vehicle_color=#{vehicleColor},vehicle_class=#{vehicleClass},motion=#{motion},gender_code=#{genderCode},age=#{age},cap=#{cap},glass=#{glass},respirator=#{respirator},coat_color=#{coatColor},coat_length=#{coatLength},coat_texture=#{coatTexture},cap_url=#{capUrl},secene_url=#{seceneUrl},video_url=#{videoUrl},is_deleted=#{isDeleted},create_user=#{createUser},create_time=#{createTime},modify_user=#{modifyUser},modify_time=#{modifyTime}
+	   where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from cap_nonmotor
+		<where>
+			<if test="f.typeFrom != null and f.typeFrom != '' ">
+				and type &gt;=#{f.typeFrom}
+			</if>
+			<if test="f.typeEnd != null and f.typeEnd != '' ">
+				and type &lt;= #{f.typeEnd}
+			</if>
+			<if test="f.deviceId != null and f.deviceId != '' ">
+				and device_id like CONCAT('%',#{f.deviceId},'%')
+			</if>
+			<if test="f.capTimeFrom != null and f.capTimeFrom != '' ">
+				and cap_time &gt;=#{f.capTimeFrom}
+			</if>
+			<if test="f.capTimeEnd != null and f.capTimeEnd != '' ">
+				and cap_time &lt;= #{f.capTimeEnd}
+			</if>
+			<if test="f.orientationFrom != null and f.orientationFrom != '' ">
+				and orientation &gt;=#{f.orientationFrom}
+			</if>
+			<if test="f.orientationEnd != null and f.orientationEnd != '' ">
+				and orientation &lt;= #{f.orientationEnd}
+			</if>
+			<if test="f.vehicleColorFrom != null and f.vehicleColorFrom != '' ">
+				and vehicle_color &gt;=#{f.vehicleColorFrom}
+			</if>
+			<if test="f.vehicleColorEnd != null and f.vehicleColorEnd != '' ">
+				and vehicle_color &lt;= #{f.vehicleColorEnd}
+			</if>
+			<if test="f.vehicleClassFrom != null and f.vehicleClassFrom != '' ">
+				and vehicle_class &gt;=#{f.vehicleClassFrom}
+			</if>
+			<if test="f.vehicleClassEnd != null and f.vehicleClassEnd != '' ">
+				and vehicle_class &lt;= #{f.vehicleClassEnd}
+			</if>
+			<if test="f.motionFrom != null and f.motionFrom != '' ">
+				and motion &gt;=#{f.motionFrom}
+			</if>
+			<if test="f.motionEnd != null and f.motionEnd != '' ">
+				and motion &lt;= #{f.motionEnd}
+			</if>
+			<if test="f.genderCodeFrom != null and f.genderCodeFrom != '' ">
+				and gender_code &gt;=#{f.genderCodeFrom}
+			</if>
+			<if test="f.genderCodeEnd != null and f.genderCodeEnd != '' ">
+				and gender_code &lt;= #{f.genderCodeEnd}
+			</if>
+			<if test="f.ageFrom != null and f.ageFrom != '' ">
+				and age &gt;=#{f.ageFrom}
+			</if>
+			<if test="f.ageEnd != null and f.ageEnd != '' ">
+				and age &lt;= #{f.ageEnd}
+			</if>
+			<if test="f.capFrom != null and f.capFrom != '' ">
+				and cap &gt;=#{f.capFrom}
+			</if>
+			<if test="f.capEnd != null and f.capEnd != '' ">
+				and cap &lt;= #{f.capEnd}
+			</if>
+			<if test="f.glassFrom != null and f.glassFrom != '' ">
+				and glass &gt;=#{f.glassFrom}
+			</if>
+			<if test="f.glassEnd != null and f.glassEnd != '' ">
+				and glass &lt;= #{f.glassEnd}
+			</if>
+			<if test="f.respiratorFrom != null and f.respiratorFrom != '' ">
+				and respirator &gt;=#{f.respiratorFrom}
+			</if>
+			<if test="f.respiratorEnd != null and f.respiratorEnd != '' ">
+				and respirator &lt;= #{f.respiratorEnd}
+			</if>
+			<if test="f.coatColorFrom != null and f.coatColorFrom != '' ">
+				and coat_color &gt;=#{f.coatColorFrom}
+			</if>
+			<if test="f.coatColorEnd != null and f.coatColorEnd != '' ">
+				and coat_color &lt;= #{f.coatColorEnd}
+			</if>
+			<if test="f.coatLengthFrom != null and f.coatLengthFrom != '' ">
+				and coat_length &gt;=#{f.coatLengthFrom}
+			</if>
+			<if test="f.coatLengthEnd != null and f.coatLengthEnd != '' ">
+				and coat_length &lt;= #{f.coatLengthEnd}
+			</if>
+			<if test="f.coatTextureFrom != null and f.coatTextureFrom != '' ">
+				and coat_texture &gt;=#{f.coatTextureFrom}
+			</if>
+			<if test="f.coatTextureEnd != null and f.coatTextureEnd != '' ">
+				and coat_texture &lt;= #{f.coatTextureEnd}
+			</if>
+			<if test="f.capUrl != null and f.capUrl != '' ">
+				and cap_url like CONCAT('%',#{f.capUrl},'%')
+			</if>
+			<if test="f.videoUrl != null and f.videoUrl != '' ">
+				and video_url like CONCAT('%',#{f.videoUrl},'%')
+			</if>
+			<if test="f.isDeletedFrom != null and f.isDeletedFrom != '' ">
+				and is_deleted &gt;=#{f.isDeletedFrom}
+			</if>
+			<if test="f.isDeletedEnd != null and f.isDeletedEnd != '' ">
+				and is_deleted &lt;= #{f.isDeletedEnd}
+			</if>
+			<if test="f.createUser != null and f.createUser != '' ">
+				and create_user like CONCAT('%',#{f.createUser},'%')
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from cap_nonmotor
+		<where>
+			<if test="f.typeFrom != null and f.typeFrom != '' ">
+				and type &gt;=#{f.typeFrom}
+			</if>
+			<if test="f.typeEnd != null and f.typeEnd != '' ">
+				and type &lt;= #{f.typeEnd}
+			</if>
+			<if test="f.deviceId != null and f.deviceId != '' ">
+				and device_id like CONCAT('%',#{f.deviceId},'%')
+			</if>
+			<if test="f.capTimeFrom != null and f.capTimeFrom != '' ">
+				and cap_time &gt;=#{f.capTimeFrom}
+			</if>
+			<if test="f.capTimeEnd != null and f.capTimeEnd != '' ">
+				and cap_time &lt;= #{f.capTimeEnd}
+			</if>
+			<if test="f.orientationFrom != null and f.orientationFrom != '' ">
+				and orientation &gt;=#{f.orientationFrom}
+			</if>
+			<if test="f.orientationEnd != null and f.orientationEnd != '' ">
+				and orientation &lt;= #{f.orientationEnd}
+			</if>
+			<if test="f.vehicleColorFrom != null and f.vehicleColorFrom != '' ">
+				and vehicle_color &gt;=#{f.vehicleColorFrom}
+			</if>
+			<if test="f.vehicleColorEnd != null and f.vehicleColorEnd != '' ">
+				and vehicle_color &lt;= #{f.vehicleColorEnd}
+			</if>
+			<if test="f.vehicleClassFrom != null and f.vehicleClassFrom != '' ">
+				and vehicle_class &gt;=#{f.vehicleClassFrom}
+			</if>
+			<if test="f.vehicleClassEnd != null and f.vehicleClassEnd != '' ">
+				and vehicle_class &lt;= #{f.vehicleClassEnd}
+			</if>
+			<if test="f.motionFrom != null and f.motionFrom != '' ">
+				and motion &gt;=#{f.motionFrom}
+			</if>
+			<if test="f.motionEnd != null and f.motionEnd != '' ">
+				and motion &lt;= #{f.motionEnd}
+			</if>
+			<if test="f.genderCodeFrom != null and f.genderCodeFrom != '' ">
+				and gender_code &gt;=#{f.genderCodeFrom}
+			</if>
+			<if test="f.genderCodeEnd != null and f.genderCodeEnd != '' ">
+				and gender_code &lt;= #{f.genderCodeEnd}
+			</if>
+			<if test="f.ageFrom != null and f.ageFrom != '' ">
+				and age &gt;=#{f.ageFrom}
+			</if>
+			<if test="f.ageEnd != null and f.ageEnd != '' ">
+				and age &lt;= #{f.ageEnd}
+			</if>
+			<if test="f.capFrom != null and f.capFrom != '' ">
+				and cap &gt;=#{f.capFrom}
+			</if>
+			<if test="f.capEnd != null and f.capEnd != '' ">
+				and cap &lt;= #{f.capEnd}
+			</if>
+			<if test="f.glassFrom != null and f.glassFrom != '' ">
+				and glass &gt;=#{f.glassFrom}
+			</if>
+			<if test="f.glassEnd != null and f.glassEnd != '' ">
+				and glass &lt;= #{f.glassEnd}
+			</if>
+			<if test="f.respiratorFrom != null and f.respiratorFrom != '' ">
+				and respirator &gt;=#{f.respiratorFrom}
+			</if>
+			<if test="f.respiratorEnd != null and f.respiratorEnd != '' ">
+				and respirator &lt;= #{f.respiratorEnd}
+			</if>
+			<if test="f.coatColorFrom != null and f.coatColorFrom != '' ">
+				and coat_color &gt;=#{f.coatColorFrom}
+			</if>
+			<if test="f.coatColorEnd != null and f.coatColorEnd != '' ">
+				and coat_color &lt;= #{f.coatColorEnd}
+			</if>
+			<if test="f.coatLengthFrom != null and f.coatLengthFrom != '' ">
+				and coat_length &gt;=#{f.coatLengthFrom}
+			</if>
+			<if test="f.coatLengthEnd != null and f.coatLengthEnd != '' ">
+				and coat_length &lt;= #{f.coatLengthEnd}
+			</if>
+			<if test="f.coatTextureFrom != null and f.coatTextureFrom != '' ">
+				and coat_texture &gt;=#{f.coatTextureFrom}
+			</if>
+			<if test="f.coatTextureEnd != null and f.coatTextureEnd != '' ">
+				and coat_texture &lt;= #{f.coatTextureEnd}
+			</if>
+			<if test="f.capUrl != null and f.capUrl != '' ">
+				and cap_url like CONCAT('%',#{f.capUrl},'%')
+			</if>
+			<if test="f.videoUrl != null and f.videoUrl != '' ">
+				and video_url like CONCAT('%',#{f.videoUrl},'%')
+			</if>
+			<if test="f.isDeletedFrom != null and f.isDeletedFrom != '' ">
+				and is_deleted &gt;=#{f.isDeletedFrom}
+			</if>
+			<if test="f.isDeletedEnd != null and f.isDeletedEnd != '' ">
+				and is_deleted &lt;= #{f.isDeletedEnd}
+			</if>
+			<if test="f.createUser != null and f.createUser != '' ">
+				and create_user like CONCAT('%',#{f.createUser},'%')
+			</if>
+		</where>
+	</select>
+</mapper>

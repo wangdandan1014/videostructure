@@ -1,0 +1,294 @@
+package com.sensing.core.aop;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Date;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.slf4j.Logger;//spring自带的日志框架
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import com.alibaba.fastjson.JSONObject;
+import com.sensing.core.bean.RpcLog;
+import com.sensing.core.bean.SysUser;
+import com.sensing.core.cacahes.CacheManagerImpl;
+import com.sensing.core.cacahes.SessionCache;
+import com.sensing.core.service.IRpcLogService;
+import com.sensing.core.service.ISysUserService;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.ResponseBean;
+import com.sensing.core.utils.StringUtils;
+import com.sensing.core.utils.WebUtil;
+import com.sensing.core.utils.Exception.InValidParamException;
+import com.sensing.core.utils.results.ResultUtils;
+
+/**
+ * 切面日志信息记录类
+ * <p> Title: RequestInfoLog </p>
+ * <p> Description: </p>
+ * <p> Company: www.sensingtech.com </p>
+ *
+ * @author mingxingyu
+ * @version 1.0
+ * @date 2018年9月1日
+ */
+@Aspect
+@Component
+public class RequestInfoLog {
+
+	// 日志记录
+	private final static Logger log = LoggerFactory.getLogger(RequestInfoLog.class);
+	@Resource
+	private IRpcLogService rcpLogService;
+	@Resource
+	private ISysUserService sysUserService;
+
+	@Around("execution(public * com.sensing.core.controller.*Controller.*(..))") // 要处理的方法，包名+类名+方法名
+	public Object cut(ProceedingJoinPoint joinPoint) {
+		RpcLog rpc = new RpcLog();
+		Object object = null;
+		ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		HttpServletRequest request = attributes.getRequest();
+		JSONObject json = getParam(request);
+
+		// 除去登录接口，抓拍查询通道的接口和postman发送的请求接口，其余接口都需要添加session验证
+		if (request.getRequestURI().indexOf("queryThriftChannel") < 0
+				&& request.getRequestURI().indexOf("getjobsunreadmsgcount") < 0
+				&& request.getRequestURI().indexOf("sipNotify") < 0
+				&& request.getRequestURI().indexOf("callStaticVideo") < 0) {
+			String userAgentHeader = request.getHeader("user-agent");
+			if (!userAgentHeader.contains("PostmanRuntime")) {
+
+				// 是登录操作
+				if (request.getRequestURI().indexOf("login") > 0) {
+					// 执行清除超时的session
+					SessionCache.clearExpireData();
+				} else {
+					// 判断session是否有效
+					try {
+
+						String userUuid = request.getHeader("uuid");
+						String logintoken = request.getHeader("logintoken");
+						if (StringUtils.isNotEmpty(userUuid) && StringUtils.isNotEmpty(logintoken)) {
+							// 判断session是否已被销毁
+							// 返回值为：false，同一个session，仍然有效
+							HttpSession session = request.getSession(true);
+							if (session.isNew()) {
+								// session无效，在这里进行页面跳转，返回到登录页面
+								log.error("请求ip:" + request.getRemoteAddr() + ";请求地址:" + request.getRequestURI()
+										+ ";session已被重置");
+								return ResultUtils.INVALIDSESSION();
+							}
+
+							HttpSession sessionCache = SessionCache.getSessionCache(userUuid);
+							if (sessionCache == null) {
+								log.error("请求ip:" + request.getRemoteAddr() + ";请求地址:" + request.getRequestURI()
+										+ ";session已被重置");
+								return ResultUtils.INVALIDSESSION();
+							}
+							if (sessionCache.getAttribute("logintoken") == null
+									|| sessionCache.getAttribute("logintoken").toString().equals("")
+									|| !logintoken.equals(sessionCache.getAttribute("logintoken").toString())) {
+								log.error("请求ip:" + request.getRemoteAddr() + ";请求地址:" + request.getRequestURI()
+										+ ";logintoken校验失败");
+								return ResultUtils.LOGINTOKENERR();
+							}
+							// 更新session最后的访问时间
+							sessionCache.setAttribute("lastAccessedTime", System.currentTimeMillis());
+						}
+					} catch (Exception e) {
+						log.error("session失效的问题" + e.getMessage());
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+
+		try {
+			String tag = json == null ? "" : json.getString("tag");
+			String rec = (String) CacheManagerImpl.getCacheByKey(tag == null ? "" : tag);
+			Date date = new Date();
+			long start = System.currentTimeMillis();
+			// 权限验证,暂时没有做
+			object = joinPoint.proceed();
+			// 后置拦截
+			long end = System.currentTimeMillis();
+			rpc.setMs((int) (end - start));
+			// 不再登录菜单中，不出异常不记日志
+			if (request.getRequestURI().indexOf("login") != -1) {
+				rpc.setType(Constants.RPC_LOG_TYPE_LOGIN);
+				rpc.setTodo("登录");
+				SysUser sysUser = (SysUser) ((ResponseBean) object).getMap().get("user");
+				if (sysUser != null) {
+					rpc.setMemo(sysUser.getUsername());
+					rpc.setCreateUser(sysUser.getUuid());
+					rpc.setModule(sysUser.getUsername());
+				}
+			} else if (request.getRequestURI().indexOf("logout") != -1) {
+				String uuid = request.getHeader("uuid");
+				if (StringUtils.isNotEmpty(uuid)) {
+					SysUser user = sysUserService.findSysUserById(uuid);
+					if (user != null) {
+						rpc.setType(Constants.RPC_LOG_TYPE_LOGIN);
+						rpc.setTodo("登出");
+						rpc.setMemo(user.getUsername());
+						rpc.setCreateUser(user.getUuid());
+						rpc.setModule(user.getUsername());
+					}
+				}
+			} else {
+				if (rec == null || rec.equals("")) {
+					if (object instanceof ResponseBean) {
+						ResponseBean bean = (ResponseBean) object;
+						// error码为-5的情况下，不记录错误信息
+						if (0 != bean.getError() && -5 != bean.getError() ) {
+							rpc.setCallTime(new Date());
+							rpc.setMode(Constants.INTERFACE_CALL_TYPE_INIT);
+							rpc.setType(Constants.RPC_LOG_TYPE_RUNNING);
+							rpc.setResult("异常");
+							rpc.setMemo("");
+							rpc.setTodo("异常");
+							rpc.setErrorMsg(bean.getMessage());
+							rcpLogService.saveNewRpcLog(rpc);
+						} 
+					}
+					return object;
+				} else if ("以图搜图-数据导出".equals(rec)) {
+					return null;
+				} else if ("语义检索-数据导出".equals(rec)) {
+					return null;
+				}else {
+					rpc.setType(Constants.RPC_LOG_TYPE_OPERATE);
+					String[] str = rec.split("-");
+					rpc.setCreateUser(request.getHeader("uuid"));
+					rpc.setModule(str[0]);
+					rpc.setTodo(str[1]);
+					rpc.setMemo(joinPoint.getArgs()[0].toString());
+					JSONObject param = getParam(request);
+					rpc.setMemo(param == null ? "" : param.toString());
+				}
+			}
+			if (object instanceof ResponseBean) {
+				ResponseBean bean = (ResponseBean) object;
+				if (0 != bean.getError()) {
+					rpc.setResult("失败");
+					rpc.setErrorMsg(bean.getMessage());
+				} else {
+					rpc.setResult("成功");
+					rpc.setErrorMsg(bean.getMessage());
+				}
+			}
+			rpc.setMode(Constants.INTERFACE_CALL_TYPE_INIT);
+			rpc.setCallTime(date);
+			rpc.setIp(WebUtil.getIpAddress(request));
+			rpc.setRpcType("httpclient");
+			rcpLogService.saveNewRpcLog(rpc);
+			log.info("请求路径:{},请求用户:{},登录的ip:{},请求参数:{}", request.getRequestURI(), request.getHeader("uuid"),
+					request.getRemoteAddr(), joinPoint.getArgs());
+		} catch (Throwable e) {
+			e.printStackTrace();
+			rpc.setCallTime(new Date());
+			rpc.setMode(Constants.INTERFACE_CALL_TYPE_INIT);
+			rpc.setType(Constants.RPC_LOG_TYPE_RUNNING);
+			rpc.setResult("异常");
+			rpc.setErrorMsg(StringUtils.getStackTrace(e).substring(0, 2000));
+			rpc.setMemo("");
+			rpc.setTodo("异常");
+			rcpLogService.saveNewRpcLog(rpc);
+			object = dealException(request, e);
+		}
+		return object;
+	}
+
+	public ResponseBean dealException(HttpServletRequest request, Throwable ex) {
+		ResponseBean bean;
+		if (ex instanceof InValidParamException) {
+			bean = ResultUtils.REQUIRED_EMPTY_ERROR();
+		} else {
+			bean = ResultUtils.UNKONW_ERROR();
+		}
+		/**** 从request中拿到入参和header ****/
+		String header = request.getHeader("uuid");
+//        BufferedReader reader = null;
+		JSONObject jsonObject = getParam(request);
+		String json = jsonObject == null ? "" : jsonObject.toJSONString();
+		log.error("\n==请求地址=========" + request.getRequestURL().toString() + "\n" + "==入参============" + json + "\n"
+				+ "==header里的uuid==" + header + "\n" + StringUtils.getStackTrace(ex));
+		return bean;
+	}
+
+	private JSONObject getParam(HttpServletRequest request) {
+
+		JSONObject jsonObject = null;
+		BufferedReader streamReader = null;
+		try {
+			streamReader = new BufferedReader(new InputStreamReader(request.getInputStream(), "UTF-8"));
+			StringBuilder responseStrBuilder = new StringBuilder();
+			String inputStr;
+
+			// 前端使用form表单提交的时候，tag值是跟谁表单一起提交的。
+			// 在此读数据的时候采用该方式获取tag的值
+			// 其他的方式待研究
+			boolean tagFlag = false;
+			String tagVal = "";
+			boolean uuidFlag = false;
+			String uuidVal = "";
+			while ((inputStr = streamReader.readLine()) != null) {
+				if (StringUtils.isNullOrEmpty(inputStr)) {
+					continue;
+				}
+				if (tagFlag) {
+					tagVal = inputStr;
+					tagFlag = false;
+				}
+				if (uuidFlag) {
+					uuidVal = inputStr;
+					uuidFlag = false;
+				}
+				responseStrBuilder.append(inputStr);
+				if (inputStr.contains("name=\"tag\"")) {
+					tagFlag = true;
+				}
+				if (inputStr.contains("name=\"uuid\"")) {
+					uuidFlag = true;
+				}
+			}
+			try {
+				jsonObject = JSONObject.parseObject(responseStrBuilder.toString());
+			} catch (Exception e) {
+				/////////////////////////////////////
+				jsonObject = new JSONObject();
+				String uuid = request.getHeader("uuid");
+				if (StringUtils.isNotEmpty(uuid)) {
+					jsonObject.put("uuid", uuid);
+				} else if (StringUtils.isNotEmpty(uuidVal)) {
+					jsonObject.put("uuid", uuidVal);
+				}
+				if (StringUtils.isNotEmpty(tagVal)) {
+					jsonObject.put("tag", tagVal);
+				}
+			} finally {
+				if (streamReader != null) {
+					try {
+						streamReader.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return jsonObject;
+	}
+}

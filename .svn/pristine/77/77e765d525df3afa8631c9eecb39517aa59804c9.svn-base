@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IChannelCfgDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.ChannelCfgTemp">
+		<id column="uuid" property="uuid" />
+		<id column="channel_name" property="channel_name" />
+		<id column="channel_description" property="channel_description" />
+		<id column="channel_type" property="channel_type" />
+		<id column="channel_addr" property="channel_addr" />
+		<id column="channel_port" property="channel_port" />
+		<id column="channel_uid" property="channel_uid" />
+		<id column="channel_psw" property="channel_psw" />
+		<id column="channel_no" property="channel_no" />
+		<id column="channel_guid" property="channel_guid" />
+		<id column="min_face_width" property="min_face_width" />
+		<id column="min_img_quality" property="min_img_quality" />
+		<id column="min_cap_distance" property="min_cap_distance" />
+		<id column="max_save_distance" property="max_save_distance" />
+		<id column="max_yaw" property="max_yaw" />
+		<id column="max_roll" property="max_pitch" />
+		<id column="max_pitch" property="max_roll" />
+		<id column="channel_longitude" property="channel_longitude" />
+		<id column="channel_latitude" property="channel_latitude" />
+		<id column="channel_area" property="channel_area" />
+		<id column="channel_direct" property="channel_direct" />
+		<id column="channel_threshold" property="channel_threshold" />
+		<id column="cap_stat" property="cap_stat" />
+		<id column="region_id" property="region_id" />
+		<id column="reserved" property="reserved" />
+		<id column="sdk_ver" property="sdk_ver" />
+		<id column="important" property="important" />
+		<id column="channel_verid" property="channel_verid" />
+		<id column="is_del" property="is_del"/>
+		<id column="search_code" property="search_code"/>
+		<id column="last_timestamp" property="last_timestamp" />
+
+	</resultMap>
+	<sql id="colum_list_alis">
+		c.uuid,c.channel_name,c.channel_description,c.channel_type,c.channel_addr,c.channel_port,c.channel_uid,c.channel_psw,c.channel_no,c.channel_guid,c.min_face_width,
+		c.min_img_quality,c.min_cap_distance,c.max_save_distance,c.max_yaw,max_roll,c.max_pitch,c.channel_longitude,c.channel_latitude,c.channel_area,c.channel_direct,c.channel_threshold,c.cap_stat,c.region_id,c.reserved,c.sdk_ver,c.important,c.channel_verid,c.search_code,c.is_del
+	</sql>
+	<select id="QueryChannelsByRegionID" resultMap="resultMap">
+		select
+		<include refid="colum_list_alis" />
+		from channel c 
+		<where>
+			<if test="1 == 1">
+				and c.is_del=0
+				<!-- 
+				and c.org_id in
+				<foreach collection="idList" item="id" index="index" open="(" close=")" separator=",">
+      				#{id}
+   				 </foreach>
+				 -->
+			</if>
+		</where>
+		LIMIT #{nStartNum},#{nCount}
+	</select>
+	
+	<select id="QueryChannelsByRegionIDCount" resultType="int">
+		select count(*)
+		from channel c 
+		<where>
+			<if test="regionId != 0 and regionId!='0'">
+				and c.region_id=#{regionId}
+			</if>
+		</where>
+	</select>
+	<select id="QueryChannel" resultMap="resultMap">
+		select
+		<include refid="colum_list_alis" />
+		from channel c 
+		<where>
+			<if test="channelId!=null and channelId!=''">
+				and c.uuid=#{channelId}
+			</if>
+		</where>
+	</select>
+	<select id="QueryChannelByGuid" resultMap="resultMap">
+		select
+		<include refid="colum_list_alis" />
+		from channel c 
+		<where>
+			<if test="guid!=null and guid!=''">
+				and c.channel_guid=#{guid}
+			</if>
+		</where>
+	</select>
+	<select id="ChannelIsExist" resultMap="resultMap">
+		select
+		<include refid="colum_list_alis" />
+		from channel c where c.channel_no = #{channel_no}
+	</select>
+	<update id="OpenAllChannel">
+	  update channel set cap_stat = #{capStat} where is_del = #{isDel}
+	</update>
+	
+	<update id="CloseAllChannel">
+	  update channel set cap_stat = #{capStat} where is_del = #{isDel}
+	</update>
+	
+	<update id="OpenChannel">
+		<if test="channelIDs!=null">
+			update channel set cap_stat = #{capStat} where is_del = #{isDel} and uuid in
+			<foreach item="channelId" collection="channelIDs" open="(" separator="," close=")">
+				#{channelId}
+			</foreach>
+		</if>
+	</update>
+	
+	<update id="CloseChannel">
+		<if test="channelIDs!=null">
+			update channel set cap_stat = #{capStat} where is_del = #{isDel} and uuid in
+			<foreach item="channelId" collection="channelIDs" open="(" separator="," close=")">
+				#{channelId}
+			</foreach>
+		</if>
+	</update>
+	<update id="updateChannel">
+	   update channel set channel_name=#{channel_name},channel_description=#{channel_description},channel_type=#{channel_type},channel_addr=#{channel_addr},channel_port=#{channel_port},channel_uid=#{channel_uid},channel_psw=#{channel_psw},channel_no=#{channel_no},channel_guid=#{channel_guid},min_face_width=#{min_face_width},min_img_quality=#{min_img_quality},min_cap_distance=#{min_cap_distance},max_save_distance=#{max_save_distance},max_yaw=#{max_yaw},max_roll=#{max_roll},max_pitch=#{max_pitch},channel_longitude=#{channel_longitude},channel_latitude=#{channel_latitude},channel_area=#{channel_area},channel_direct=#{channel_direct},channel_threshold=#{channel_threshold},cap_stat=#{cap_stat},region_id=#{region_id},reserved=#{reserved},sdk_ver=#{sdk_ver},important=#{important},channel_verid=#{channel_verid}
+	   where uuid=#{uuid}
+	</update>
+	<insert id="AddChannel">
+	   insert into channel(uuid,channel_name,channel_description,channel_type,channel_addr,channel_port,channel_uid,channel_psw,channel_no,channel_guid,min_face_width,min_img_quality,min_cap_distance,max_save_distance,max_yaw,max_roll,max_pitch,channel_longitude,channel_latitude,channel_area,channel_direct,channel_threshold,cap_stat,is_del,last_timestamp,region_id,reserved,sdk_ver,important,channel_verid,search_code
+	   values(
+		   #{uuid},#{channel_name},#{channel_description},#{channel_type},#{channel_addr},#{channel_port},#{channel_uid},#{channel_psw},#{channel_no},#{channel_guid},#{min_face_width},#{min_img_quality},#{min_cap_distance},#{max_save_distance},#{max_yaw},#{max_roll},#{max_pitch},#{channel_longitude},#{channel_latitude},#{channel_area},#{channel_direct},#{channel_threshold},#{cap_stat},#{is_del},#{lastTimestamp},#{region_id},#{reserved},#{sdk_ver},#{important},#{channel_verid},#{search_code}
+	   )
+	</insert>
+	<update id="removeChannel">
+		update channel set is_del = #{isDel} where uuid = #{channelId}
+	</update>
+	<update id="DelChannelByRegionID">
+		update channel set is_del = #{isDel} where region_id = #{regionID}
+	</update>
+	<select id="queryMaxSearchCodeByCode" resultType="String" >
+		select search_code from channel where search_code like CONCAT(#{search_code},'%') order by search_code desc limit 1
+	</select>
+	<update id="RemoveChannelBySearchCode">
+		update channel set is_del = #{isDel} where search_code like CONCAT(#{searchCode},'%')
+	</update>
+	<update id="UpdateChannelBySearchCode">
+		update channel set region_id = #{parentId} where search_code like CONCAT(#{searchCode},'%')
+	</update>
+</mapper>

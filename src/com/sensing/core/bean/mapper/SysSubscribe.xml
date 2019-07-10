@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysSubscribeDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.SysSubscribe">
+		<id column="uuid" property="uuid" />
+		<id column="uid" property="uid" />
+		<id column="job_id" property="jobId" />
+		<id column="state" property="state" />
+		<id column="sub_time" property="subTime" />
+		<id column="sub_type" property="subType" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,uid,job_id,state,sub_time,sub_type
+	</sql>
+	<insert id="saveSysSubscribe">
+	   insert into sys_subscribe(uuid,uid,job_id,state,sub_time,sub_type)
+	   values(
+		   #{uuid},#{uid},#{jobId},#{state},#{subTime},#{subType}
+	   )
+	</insert>
+	<select id="getSysSubscribe" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_subscribe
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeSysSubscribe">
+		delete from sys_subscribe
+		where uuid = #{uuid}
+	</delete>
+		<delete id="removeSysSubscribeByJobId">
+		delete from sys_subscribe
+		where job_id=#{jobId}
+	</delete>
+	<delete id="removeSysSubscribeByUidAndJobId" parameterType="com.sensing.core.bean.SysSubscribe">
+		delete from sys_subscribe
+		where uid = #{uid} and job_id=#{jobId}
+	</delete>
+	<update id="updateSysSubscribe">
+	   update sys_subscribe set uid=#{uid},job_id=#{jobId},state=#{state},sub_time=#{subTime},sub_type=#{subType}
+	   where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_subscribe
+		<where>
+			<if test="f.uid != null and f.uid != '' ">
+				and uid = #{f.uid}
+			</if>
+			<if test="f.jobId != null and f.jobId != '' ">
+				and job_id = #{f.jobId}
+			</if>
+			<if test="f.stateFrom != null and f.stateFrom != '' ">
+				and state &gt;=#{f.stateFrom}
+			</if>
+			<if test="f.stateEnd != null and f.stateEnd != '' ">
+				and state &lt;= #{f.stateEnd}
+			</if>
+			<if test="f.state != null and f.state != '' ">
+				and state = #{f.state}
+			</if>
+			<if test="f.subType != null and f.subType != '' ">
+				and sub_type = #{f.subType}
+			</if>
+			<if test="f.subTimeFrom != null and f.subTimeFrom != '' ">
+				and sub_time &gt;=#{f.subTimeFrom}
+			</if>
+			<if test="f.subTimeEnd != null and f.subTimeEnd != '' ">
+				and sub_time &lt;= #{f.subTimeEnd}
+			</if>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from sys_subscribe
+		<where>
+			<if test="f.uid != null and f.uid != '' ">
+				and uid = #{f.uid}
+			</if>
+			<if test="f.jobId != null and f.jobId != '' ">
+				and job_id = #{f.jobId}
+			</if>
+			<if test="f.stateFrom != null and f.stateFrom != '' ">
+				and state &gt;=#{f.stateFrom}
+			</if>
+			<if test="f.stateEnd != null and f.stateEnd != '' ">
+				and state &lt;= #{f.stateEnd}
+			</if>
+			<if test="f.state != null and f.state != '' ">
+				and state = #{f.state}
+			</if>
+			<if test="f.subType != null and f.subType != '' ">
+				and sub_type = #{f.subType}
+			</if>
+			<if test="f.subTimeFrom != null and f.subTimeFrom != '' ">
+				and sub_time &gt;=#{f.subTimeFrom}
+			</if>
+			<if test="f.subTimeEnd != null and f.subTimeEnd != '' ">
+				and sub_time &lt;= #{f.subTimeEnd}
+			</if>
+		</where>
+	</select>
+	<select id="queryByParam" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_subscribe
+		<where>
+			<if test="uid != null and uid != '' ">
+				and uid = #{uid}
+			</if>
+			<if test="jobId != null and jobId != '' ">
+				and job_id = #{jobId}
+			</if>
+			<if test="subType != null and subType != '' ">
+				and sub_type = #{subType}
+			</if>
+		</where>
+	</select>
+	<update id="removeSubscribe">
+		delete from subscribe where uid = #{uid} and job_id = #{f.jobId} and sub_type=#{subType}
+	</update>
+
+
+</mapper>

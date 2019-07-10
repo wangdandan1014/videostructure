@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysRoleResoDAO">
+    <resultMap id="resultMap" type="com.sensing.core.bean.SysRoleReso">
+        <id column="id" property="id"/>
+        <id column="role_id" property="roleId"/>
+        <id column="reso_id" property="resoId"/>
+        <id column="is_del" property="isDel"/>
+    </resultMap>
+    <sql id="column_list">
+		id,role_id,reso_id,is_del
+	</sql>
+    <insert id="saveSysRoleReso" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.sensing.core.bean.SysRoleReso">
+	   insert into sys_role_reso(role_id,reso_id)
+	   values(
+		   #{roleId},#{resoId}
+	   )
+	</insert>
+    <select id="getSysRoleReso" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from sys_role_reso
+        where id = #{id}
+    </select>
+    <delete id="removeSysRoleReso">
+		delete from sys_role_reso
+		where id = #{id}
+	</delete>
+
+
+    <update id="updateSysRoleReso">
+	   update sys_role_reso set role_id=#{roleId},reso_id=#{resoId}
+	   where id=#{id}
+	</update>
+
+    <update id="updateBetchSysRoleReso">
+        <foreach collection="list" item="item" index="index" separator=";">
+            update sys_role_reso set is_del=#{item.isDel}
+            where role_id=#{roleId} and reso_id=#{item.resoId}
+        </foreach>
+    </update>
+
+    <insert id="insertBetchSysReso" parameterType="com.sensing.core.bean.SysRoleSaveReq" >
+        INSERT INTO sys_role_reso (role_id, reso_id)
+        VALUES
+        <foreach collection="sysResourceIds" item="item" separator=",">
+            (#{roleId}, #{item})
+        </foreach>
+    </insert>
+
+    <!--根据roleid删除系统资源-->
+    <delete id="delSysResoByRoleId" parameterType="com.sensing.core.bean.SysRoleSaveReq">
+        DELETE FROM sys_role_reso WHERE role_id=#{roleId}
+    </delete>
+
+
+    <!--  如果参数是String,Integer 这种类型，判空应用 _parameter   -->
+    <select id="queryList" resultMap="resultMap" parameterType="java.lang.Integer">
+        select
+        <include refid="column_list"/>
+        from sys_role_reso
+        <if test="_parameter != null and _parameter != '' ">
+            where role_id = #{roleId}
+        </if>
+    </select>
+    <select id="selectCount" resultType="int">
+        select
+        count(id)
+        from sys_role_reso
+        <where>
+            <if test="f.roleIdFrom != null and f.roleIdFrom != '' ">
+                and role_id &gt;=#{f.roleIdFrom}
+            </if>
+            <if test="f.roleIdEnd != null and f.roleIdEnd != '' ">
+                and role_id &lt;= #{f.roleIdEnd}
+            </if>
+            <if test="f.resoIdFrom != null and f.resoIdFrom != '' ">
+                and reso_id &gt;=#{f.resoIdFrom}
+            </if>
+            <if test="f.resoIdEnd != null and f.resoIdEnd != '' ">
+                and reso_id &lt;= #{f.resoIdEnd}
+            </if>
+        </where>
+    </select>
+    <select id="getSysResoByRoleId" resultMap="resultMap" >
+        select
+        <include refid="column_list"/>
+        from sys_role_reso
+        <if test="roleId != null and roleId != '' ">
+            where role_id = #{roleId}
+        </if>
+
+    </select>
+
+    <insert id="saveSysRoleResoBetch" parameterType="java.util.List">
+        insert into sys_role_reso(role_id,reso_id,is_del)
+        VALUE
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.roleId},#{item.resoId},#{item.isDel})
+        </foreach>
+    </insert>
+
+
+</mapper>

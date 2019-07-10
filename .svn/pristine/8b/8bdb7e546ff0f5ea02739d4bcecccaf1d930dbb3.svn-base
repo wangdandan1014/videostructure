@@ -1,0 +1,264 @@
+package com.sensing.core.service.impl;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Service;
+
+import com.sensing.core.bean.MotorVehicle;
+import com.sensing.core.bean.NonmotorVehicle;
+import com.sensing.core.bean.Person;
+import com.sensing.core.bean.SysTypecode;
+import com.sensing.core.dao.IAlarmDAO;
+import com.sensing.core.dao.IDataOverviewDAO;
+import com.sensing.core.dao.ISysTypecodeDAO;
+import com.sensing.core.resp.CapResp;
+import com.sensing.core.service.IDataOverviewService;
+import com.sensing.core.service.IJobsChannelService;
+import com.sensing.core.utils.Pager;
+import com.sensing.core.utils.StringUtils;
+import com.sensing.core.utils.time.QueryDateUtils;
+
+/**
+ * 
+ * <p>
+ * Title: DataOverviewServiceImpl
+ * </p>
+ * <p>
+ * Description:数据概览实现业务类
+ * </p>
+ * <p>
+ * Company: www.sensingtech.com
+ * </p>
+ * 
+ * @author mingxingyu
+ * @date 2018年12月5日
+ * @version 1.0
+ */
+@Service
+public class DataOverviewServiceImpl implements IDataOverviewService {
+
+	@Resource
+	public IDataOverviewDAO dataOverviewDAO;
+	@Resource
+	public ISysTypecodeDAO sysTypecodeDAO;
+	@Resource
+	public IAlarmDAO alarmDAO;
+
+	private static final Log log = LogFactory.getLog(IJobsChannelService.class);
+
+	/**
+	 * 根据时间查找告警的数量
+	 */
+	public List<Map<String, Object>> alarmCount(Map<String, Object> sqlParams) throws Exception {
+		return dataOverviewDAO.alarmCount(sqlParams);
+	}
+
+	/**
+	 * 统计时间段范围内每天的告警的数量
+	 * 
+	 * @param params
+	 * @return
+	 * @throws Exception
+	 * @author mingxingyu
+	 * @date 2018年12月5日 下午1:51:13
+	 */
+	public List<Map<String, Object>> alarmCountByDay(Map<String, Object> params) throws Exception {
+
+		List<Map<String, Object>> resultList = new ArrayList<Map<String, Object>>();
+
+		SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
+		SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date startDate = sdf2.parse(params.get("startDate").toString());
+		Date endDate = sdf2.parse(params.get("endDate").toString());
+
+		Date nextDate = sdf1.parse(sdf1.format(startDate));
+		while (nextDate.getTime() <= endDate.getTime()) {
+
+			String currDay = sdf1.format(nextDate);
+
+			Long nextDayStart = (sdf2.parse(currDay + " 00:00:00")).getTime() / 1000;
+			Long nextDayEnd = (sdf2.parse(currDay + " 23:59:59")).getTime() / 1000;
+
+			Map<String, Object> sqlParams = new HashMap<String, Object>();
+			String deviceId = (String) params.get("deviceId");
+			List<String> channels = null;
+			if (StringUtils.isNotEmpty(deviceId)) {
+				channels = Arrays.asList(deviceId.split(",")).stream().map(s -> s.trim()).collect(Collectors.toList());
+			}
+			sqlParams.put("deviceIds", channels);
+			if (nextDayStart < startDate.getTime() / 1000) {
+				sqlParams.put("startTime", startDate.getTime() / 1000);
+			} else {
+				sqlParams.put("startTime", nextDayStart);
+			}
+			if (nextDayEnd > endDate.getTime() / 1000) {
+				sqlParams.put("endTime", endDate.getTime() / 1000);
+			} else {
+				sqlParams.put("endTime", nextDayEnd);
+			}
+//			List<Map<String, Object>> sqlResultList = dataOverviewDAO.alarmCount(sqlParams);
+			List<Map<String, Object>> sqlResultList = dataOverviewDAO.alarmCountByDay(sqlParams);
+			Map<String, Object> resultMap = new HashMap<String, Object>();
+//			int level1Count = 0;
+//			int level2Count = 0;
+//			int level3Count = 0;
+			int alarmCount = 0;
+			if (sqlResultList != null && sqlResultList.size() > 0) {
+				for (int i = 0; i < sqlResultList.size(); i++) {
+					Map<String, Object> map = sqlResultList.get(i);
+//					int level = (int) map.get("alarmLevel");
+					alarmCount = ((Long) map.get("alarmCount")).intValue();
+//					if (level == 1) {
+//						level1Count = alarmCount;
+//					}
+//					if (level == 2) {
+//						level2Count = alarmCount;
+//					}
+//					if (level == 3) {
+//						level3Count = alarmCount;
+//					}
+				}
+				resultMap.put("date", currDay);
+				resultMap.put("alarmCount", alarmCount);
+//				resultMap.put("level1Count", level1Count);
+//				resultMap.put("level2Count", level2Count);
+//				resultMap.put("level3Count", level3Count);
+				resultList.add(resultMap);
+			} else {
+				resultMap.put("alarmCount", alarmCount);
+//				resultMap.put("level1Count", level1Count);
+//				resultMap.put("level2Count", level2Count);
+//				resultMap.put("level3Count", level3Count);
+				resultList.add(resultMap);
+
+			}
+
+			Calendar c = Calendar.getInstance();
+			c.setTime(nextDate);
+			c.add(Calendar.DAY_OF_MONTH, 1);
+			nextDate = c.getTime();
+		}
+		return resultList;
+	}
+
+	@Override
+	public List<Map<String, Object>> alarmTypeStatistics(Map<String, Object> map) throws Exception {
+		Map<String, Object> param = new HashMap<String, Object>();
+		List<Map<String, Object>> list = dataOverviewDAO.alarmTypeStatistics(map);
+		// list [{pct=1.0000, itemId=2, count=193}]
+		if (list != null && list.size() > 0) {
+			for (int i = 0; i < list.size(); i++) {
+				Integer itemId = (Integer) list.get(i).get("itemId");
+				List<SysTypecode> list2 = sysTypecodeDAO.selectSysTypeCodeByTypeCodeAndItemId("TEMPLATEDB_TYPE",
+						String.valueOf(itemId));
+				if (list2 != null && list2.size() > 0) {
+					SysTypecode sysTypecode = list2.get(0);
+					param.put("itemValue", sysTypecode.getItemValue());
+					list.get(i).put("itemValue", sysTypecode.getItemValue());
+
+				}
+				BigDecimal pct = (BigDecimal) list.get(i).get("pct");
+				list.get(i).put("pct", pct.multiply(new   BigDecimal(100)));
+			}
+		}
+		return list;
+	}
+
+	@Override
+	public List<Map<String, Object>> regionAlarmStatistics(Map<String, Object> map) throws Exception {
+		List<Map<String, Object>> list = dataOverviewDAO.regionAlarmStatistics(map);
+		int sum = alarmDAO.queryAlarmCount(map);
+		if (list != null && list.size() > 0) {
+			for (int i = 0; i < list.size(); i++) {
+				BigDecimal count = (BigDecimal) list.get(i).get("count");
+				double pct = count.doubleValue() / (double) sum;
+				list.get(i).put("pct", pct*100);
+			}
+		}
+		return list;
+	}
+
+	@Override
+	public Map<String, Object> alarmStatistics(Map<String, Object> sqlParams) throws Exception {
+		Map<String, Object> map = new HashMap<>();
+		sqlParams.put("state", 20);
+		int allCount = dataOverviewDAO.alarmStatistics(sqlParams);
+		int cfmdCount = dataOverviewDAO.alarmStatisticsConfirmed(sqlParams);
+		String type = (String) sqlParams.get("type");
+		double allPct = (Double) 0.0;
+		double cfmdPct = (Double) 0.0;
+		int allLastCount = 0;
+		int cfmdLastCount = 0;
+		if (StringUtils.isNotEmpty(type)) {
+			Date[] dates;
+			long startTime = 0l;
+			long endTime = 0l;
+			// 1:昨天 2：上周 3：上月
+			switch (type) {
+			case "1":
+				dates = QueryDateUtils.getYesterday();
+				if (dates != null && dates.length == 2) {
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				}
+				sqlParams.put("startTime", startTime);
+				sqlParams.put("endTime", endTime);
+				break;
+			case "2":
+				dates = QueryDateUtils.getMinus7Day();
+				if (dates != null && dates.length == 2) {
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				}
+				sqlParams.put("startTime", startTime);
+				sqlParams.put("endTime", endTime - 1);
+				break;
+			case "3":
+				dates = QueryDateUtils.getMinus30Day();
+				if (dates != null && dates.length == 2) {
+					endTime = dates[0].getTime() / 1000;
+					startTime = dates[1].getTime() / 1000;
+				}
+				sqlParams.put("startTime", startTime);
+				sqlParams.put("endTime", endTime - 1);
+				break;
+			default:
+				break;
+			}
+			allLastCount = dataOverviewDAO.alarmStatistics(sqlParams);
+			cfmdLastCount = dataOverviewDAO.alarmStatisticsConfirmed(sqlParams);
+			if (allLastCount == 0) {
+				allPct = 1;
+			} else {
+				allPct = (double) (allCount - allLastCount) / (double) allLastCount;
+			}
+			if (cfmdLastCount == 0) {
+				cfmdPct = 1;
+			} else {
+				cfmdPct = (double) (cfmdCount - cfmdLastCount) / (double) cfmdLastCount;
+			}
+		}
+		map.put("alarmCount", allCount);// 报警总数量
+		map.put("alarmPct", new BigDecimal(allPct*100).setScale(4, RoundingMode.DOWN));// 报警环比 四舍五入保留四位小数
+		map.put("eftCount", cfmdCount);// 有效报警
+		map.put("eftPct", new BigDecimal(cfmdPct*100).setScale(4, RoundingMode.DOWN));// 有效报警环比cfmdPct
+//		map.put("alarmLastCount", allLastCount);
+//		map.put("cfmdLastCount", cfmdLastCount);
+		return map;
+	}
+
+}

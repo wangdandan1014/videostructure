@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8" ?><!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ITaskDAO">
+    <resultMap id="resultMap" type="com.sensing.core.bean.Task">
+        <id column="uuid" property="uuid"/>
+        <id column="name" property="name"/>
+        <id column="type" property="type"/>
+        <id column="state" property="state"/>
+        <id column="run_week" property="runWeek"/>
+        <id column="analy_type" property="analyType"/>
+        <id column="auto_start" property="autoStart"/>
+        <id column="is_deleted" property="isDeleted"/>
+        <id column="create_user" property="createUser"/>
+        <id column="createUserUuid" property="createUserUuid"/>
+        <id column="create_time" property="createTime"/>
+        <id column="modify_user" property="modifyUser"/>
+        <id column="modify_time" property="modifyTime"/>
+        <id column="memo" property="memo"/>
+
+        <id column="begin_date" property="beginDate"/>
+        <id column="end_date" property="endDate"/>
+        <id column="start_time" property="startTime"/>
+        <id column="end_time" property="endTime"/>
+
+        <id column="analy_start_time" property="analyStartTime"/>
+        <id column="analy_end_time" property="analyEndTime"/>
+        <id column="analy_begin_date" property="analyBeginDate"/>
+        <id column="analy_end_date" property="analyEndDate"/>
+
+        <id column="video_speed" property="videoSpeed"/>
+    </resultMap>
+    <sql id="column_list">
+		uuid,name,type,state,begin_date,end_date,start_time,end_time,run_week,analy_start_time,analy_end_time,analy_type,auto_start,is_deleted,create_user,create_time,modify_user,modify_time,analy_begin_date ,analy_end_date,video_speed
+	</sql>
+    <insert id="saveTask">
+	   insert into task(uuid,name,type,state,begin_date,end_date,start_time,end_time,run_week,analy_start_time,analy_end_time,analy_type,auto_start,is_deleted,create_user,create_time,modify_user,modify_time,memo,analy_begin_date ,analy_end_date,video_speed)
+	   values(
+		   #{uuid},#{name},#{type},#{state},#{beginDate},#{endDate},#{startTime},#{endTime},#{runWeek},#{analyStartTime},#{analyEndTime},#{analyType},#{autoStart},0,#{createUser},#{createTime},#{modifyUser},#{modifyTime},#{memo},#{analyBeginDate} ,#{analyEndDate},#{videoSpeed}
+	   )
+	</insert>
+    <select id="getTask" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from task
+        where uuid = #{uuid}
+    </select>
+    <select id="getTaskCount" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from task where type = 1 and is_deleted = 0
+    </select>
+    <update id="removeTask">
+        update task set is_deleted=1,modify_time=now()
+        where uuid=#{uuid}
+    </update>
+
+    <update id="updateTask">
+        update task
+        <set>
+            <if test="name !=null and name!=''">
+                name=#{name},
+            </if>
+            <if test="type !=null and type!=''">
+                type=#{type},
+            </if>
+            <if test="state !=null and state!=''">
+                state=#{state},
+            </if>
+            begin_date=#{beginDate},
+            end_date=#{endDate},
+            <if test="startTime !=null and startTime!=''">
+                start_time=#{startTime},
+            </if>
+            <if test="endTime !=null and endTime!=''">
+                end_time=#{endTime},
+            </if>
+            <if test="runWeek !=null and runWeek!=''">
+                run_week=#{runWeek},
+            </if>
+            <if test="analyBeginDate !=null and analyBeginDate!=''">
+                analy_begin_date=#{analyBeginDate},
+            </if>
+            <if test="analyEndDate !=null and analyEndDate!=''">
+                analy_end_date=#{analyEndDate},
+            </if>
+            <if test="analyStartTime !=null and analyStartTime!=''">
+                analy_start_time=#{analyStartTime},
+            </if>
+            <if test="analyEndTime !=null and analyEndTime!=''">
+                analy_end_time=#{analyEndTime},
+            </if>
+
+            <if test="analyType !=null and analyType!=''">
+                analy_type=#{analyType},
+            </if>
+            <if test="autoStart !=null and autoStart!=''">
+                auto_start=#{autoStart},
+            </if>
+            <if test="modifyUser !=null and modifyUser!=''">
+                modify_user=#{modifyUser},
+            </if>
+
+            <if test="isDeleted !=null and isDeleted!=''">
+                is_deleted=#{isDeleted},
+            </if>
+            <if test="memo !=null and memo!=''">
+                memo=#{memo},
+            </if>
+            modify_time=now()
+
+        </set>
+        where uuid=#{uuid}
+    </update>
+    <update id="updateState">
+        update task
+        <set>
+            state=#{state},
+            <if test="modifyUser != null and modifyUser!='' ">
+                modify_user=#{modifyUser},
+            </if>
+            modify_time=now()
+        </set>
+        where uuid=#{uuid}
+    </update>
+
+    <select id="queryList" resultMap="resultMap">
+        select
+        t.uuid,
+        t.name,
+        t.type,
+        t.state,
+        t.begin_date As beginDate,
+        t.end_date As endDate,
+        t.start_time As startTime,
+        t.end_time AS endTime,
+        t.run_week As runWeek,
+        t.analy_start_time AS analyStartTime ,
+        t.analy_end_time AS analyEndTime ,
+        t.analy_type AS analyType,
+        t.auto_start AS autoStart,
+        t.is_deleted AS isDeleted,
+        su.username As createUser,
+        t.create_user As createUserUuid,
+        t.create_time AS createTime,
+        t.modify_user AS modifyUser,
+        t.modify_time AS modifyTime,
+        t.analy_begin_date AS analyBeginDate,
+        t.analy_end_date AS analyEndDate,
+        t.video_speed AS videoSpeed
+        from task t left join sys_user su on t.create_user = su.uuid
+        <where>
+            1=1
+            <if test="f.name != null and f.name != '' ">
+                and t.name like CONCAT('%',#{f.name},'%')
+            </if>
+            <if test="f.type != null and f.type != '' ">
+                and t.type = #{f.type}
+            </if>
+            <if test="f.state != null and f.state != '' ">
+                and t.state = #{f.state}
+            </if>
+            and t.is_deleted = 0
+        </where>
+        order by t.create_time desc
+        <if test="pageFlag != null and pageFlag == 'pageFlag'">
+            LIMIT #{beginCount},#{pageRows}
+        </if>
+
+    </select>
+    <select id="selectCount" resultType="java.lang.Integer">
+        select
+        count(t.uuid)
+        from task t left join sys_user su on t.create_user = su.uuid
+        <where>
+            1=1
+            <if test="f.name != null and f.name != '' ">
+                and t.name like CONCAT('%',#{f.name},'%')
+            </if>
+            <if test="f.type != null and f.type != '' ">
+                and t.type = #{f.type}
+            </if>
+            <if test="f.state != null and f.state != '' ">
+                and t.state = #{f.state}
+            </if>
+            and t.is_deleted = 0
+        </where>
+    </select>
+
+    <select id="queryListByName" resultType="com.sensing.core.bean.TaskRespTempList"
+            parameterType="com.sensing.core.utils.Pager">
+        SET SESSION group_concat_max_len=18446744073709551615;
+        SELECT *
+        FROM (
+        SELECT
+        t.uuid taskUuid,
+        t.name taskName,
+        (SELECT GROUP_CONCAT(c.channel_name  order by c.uuid ) FROM channel c, task_channel tc WHERE tc.channel_uuid =
+        c.uuid AND tc.task_uuid = t.uuid) channelNames,
+        t.analy_type,
+        t.begin_date,
+        t.end_date,
+        t.start_time,
+        t.end_time,
+        t.type,
+        t.run_week As runWeek,
+        su.uuid createUserUuid,
+        su.username createUser,
+        t.state,
+        t.analy_start_time,
+        t.analy_end_time,
+        t.create_time,
+        t.is_deleted As isDel
+        FROM
+        task t LEFT JOIN sys_user su ON t.create_user = su.uuid
+        WHERE
+        1=1
+        <if test="f.type !=null and f.type !='' ">
+            AND t.type = #{f.type}
+        </if>
+        and t.is_deleted = 0
+        <if test="f.state != null and f.state != '' ">
+            AND t.state=#{f.state}
+        </if>
+        ) tab
+        <if test="f.name != null and f.name != '' ">
+            WHERE  LOCATE( CONCAT( #{f.name}),tab.channelNames)>0
+            or LOCATE( CONCAT( #{f.name}),tab.taskName)>0
+        </if>
+
+        order by tab.create_time desc
+        <if test="pageFlag != null and pageFlag == 'pageFlag'">
+            LIMIT #{beginCount},#{pageRows}
+        </if>
+
+    </select>
+    <select id="selectCountByName" resultType="java.lang.Integer" parameterType="com.sensing.core.utils.Pager">
+        SELECT COUNT(1)
+        FROM (
+        SELECT
+        t.uuid taskUuid,
+        t.name taskName,
+        (SELECT GROUP_CONCAT(c.channel_name SEPARATOR '、') FROM channel c, task_channel tc WHERE tc.channel_uuid =
+        c.uuid AND tc.task_uuid = t.uuid) channelNames,
+        (SELECT COUNT(1) FROM task_channel tc WHERE tc.task_uuid = t.uuid) channelCount,
+        t.analy_type,
+        t.begin_date,
+        t.end_date,
+        t.start_time,
+        t.end_time,
+        su.uuid createUserUuid,
+        su.username createUser,
+        t.state,
+        t.analy_start_time,
+        t.analy_end_time
+        FROM
+        task t LEFT JOIN sys_user su ON t.create_user = su.uuid
+        WHERE t.type = 1 and t.is_deleted = 0
+        <if test="f.state != null and f.state != '' ">
+            AND t.state=#{f.state}
+        </if>
+        ) tab
+        <if test="f.name != null and f.name != '' ">
+            WHERE  LOCATE( CONCAT( #{f.name}),tab.channelNames)>0
+            or LOCATE( CONCAT( #{f.name}),tab.taskName)>0
+        </if>
+
+    </select>
+
+    <select id="getUpdateStateTask" resultMap="resultMap" parameterType="java.util.List">
+        select
+        <include refid="column_list"/>
+        FROM task t WHERE t.type =1 AND t.state IN
+        <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        and t.is_deleted=0
+    </select>
+
+    <select id="getHistoryUpdateStateTask" resultMap="resultMap" parameterType="java.util.List">
+        select
+        <include refid="column_list"/>
+        FROM task t WHERE t.type =2 AND t.state IN
+        <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        and t.is_deleted=0
+    </select>
+
+    <!-- isPreState 为1 将改任务设置为停止 0:待启动(任务从未进行) 1:处理中  2:休息中 3:已暂停 4:已停止 5:已完成 6:失败 -->
+    <update id="setUpdateStateTasks" parameterType="java.util.List">
+        <foreach collection="list" item="item" index="index" separator=";">
+            update task
+            set
+            <choose>
+                <when test="item.isPreState!=null and item.isPreState == 1 ">
+                    state = 4,
+                </when>
+                <otherwise>
+                    state = #{item.newState},
+                </otherwise>
+            </choose>
+            modify_time = now()
+            WHERE uuid = #{item.uuid}
+        </foreach>
+    </update>
+
+    <update id="setUpdateStateTask" parameterType="com.sensing.core.bean.Task">
+            update task
+            set state = #{newState},
+            modify_time = now()
+            WHERE uuid = #{uuid}
+    </update>
+
+    <select id="getrunningtaskCount" resultType="java.lang.Integer"
+            parameterType="com.sensing.core.bean.RunningTaskCountReq">
+
+        SELECT count(1)
+        FROM task t
+        WHERE t.type IN (1, 2) AND t.state=1 AND t.is_deleted = 0
+
+        <if test="userUuid!=null and userUuid!='' ">
+            AND t.create_user =#{ userUuid}
+        </if>
+    </select>
+
+    <select id="getTaskByName" resultType="com.sensing.core.bean.Task">
+        select
+        <include refid="column_list"/>
+        from task where is_deleted=0
+        and name=#{taskName} and type = #{type}
+    </select>
+    <select id="getOfflineVideoCount" resultType="java.lang.Integer">
+        select count(1)
+        from task where type=3
+        and state = 1
+    </select>
+    
+    
+    <resultMap id="resultMapTB" type="com.sensing.core.utils.task.TaskBean">
+        <id column="uuid" property="uuid"/>
+        <id column="beginDate" property="beginDate"/>
+        <id column="endDate" property="endDate"/>
+        <id column="startTime" property="startTime"/>
+        <id column="endTime" property="endTime"/>
+        <id column="runWeek" property="runWeek"/>
+        <id column="taskType" property="taskType"/>
+        <id column="analyType" property="analyType"/>
+        <id column="devices" property="devices"/>
+        
+    </resultMap>
+    <select id="queryTaskAndJobsList"  resultMap="resultMapTB" >
+    	(SELECT
+			t.uuid,
+			t.begin_date beginDate,
+			t.end_date endDate,
+			t.analy_start_time startTime,
+			t.analy_end_time endTime,
+			t.run_week runWeek,
+			1 as taskType,
+			t.analy_type as analyType,
+			(SELECT GROUP_CONCAT(tc.channel_uuid SEPARATOR ',') from task_channel tc where tc.task_uuid = t.uuid) as devices
+		FROM
+			task t
+		WHERE
+			t.is_deleted = 0
+		)
+		UNION all
+		(SELECT
+			j.uuid,
+			j.begin_date beginDate,
+			j.end_date endDate,
+			j.begin_time startTime,
+			j.end_time endTime,
+			j.run_week runWeek,
+			2 as taskType ,
+			'3' as analyType,
+			(SELECT GROUP_CONCAT(jc.channel_uuid SEPARATOR ',') from jobs_channel jc where jc.job_uuid = j.uuid) as devices
+		from jobs j
+		where 
+			j.is_deleted = 0
+		)
+    </select>
+    <select id="queryTaskRunningUuidsByDeviceId"  resultType="com.sensing.core.bean.Task" >
+    	SELECT DISTINCT
+			t.uuid
+		FROM
+			`task` t
+		LEFT JOIN task_channel tc ON tc.task_uuid = t.uuid 
+		WHERE
+		( t.state = 1 OR t.type = 3 ) 
+		AND  t.is_deleted = 0
+<!-- 		AND  analy_type LIKE '%1%' -->
+		AND t.type != 2
+		AND  tc.channel_uuid = #{deviceId}
+    </select>
+    
+     <select id="queryDeviceByDeviceId"  resultType="com.sensing.core.bean.Channel" >
+    	SELECT ch.*
+		FROM
+			`channel` ch
+		WHERE
+			ch.uuid = #{deviceId}
+    </select>
+
+</mapper>

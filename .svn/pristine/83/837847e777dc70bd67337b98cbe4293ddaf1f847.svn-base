@@ -1,0 +1,6 @@
+driver=com.mysql.jdbc.Driver
+db_ip=192.168.1.217
+db_port=3306
+db_schema=videostructure
+sqlusername=root
+sqlpassword=1qazXSW@

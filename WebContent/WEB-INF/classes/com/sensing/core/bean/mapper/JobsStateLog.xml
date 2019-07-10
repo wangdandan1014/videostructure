@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.IJobsStateLogDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.JobsStateLog">
+		<id column="id" property="id" />
+		<id column="title" property="title" />
+		<id column="jobs_uuid" property="jobsUuid" />
+		<id column="jobs_state" property="jobsState" />
+		<id column="memo" property="memo" />
+		<id column="create_user" property="createUser" />
+		<id column="create_time" property="createTime" />
+	</resultMap>
+	<sql id="column_list">
+		id,title,jobs_uuid,jobs_state,memo,create_user,create_time
+	</sql>
+	<insert id="saveJobsStateLog">
+		insert into
+		jobs_state_log(title,jobs_uuid,jobs_state,memo,create_user,create_time)
+		values(
+		#{title},#{jobsUuid},#{jobsState},#{memo},#{createUser},#{createTime}
+		)
+	</insert>
+	<select id="getJobsStateLog" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from jobs_state_log
+		where id = #{id}
+	</select>
+	<select id="getJobsStateLogs" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from jobs_state_log
+		where jobs_uuid = #{uuid} order by create_time asc
+	</select>
+	<select id="getJobsStateLogByStateAndUuid" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from jobs_state_log
+		where jobs_uuid = #{uuid} and jobs_state = #{state}
+	</select>
+	<update id="updateJobsStateLog">
+		update jobs_state_log
+		title={title},jobs_uuid={jobsUuid},jobs_state={jobsState},memo={memo},create_user={createUser},create_time={createTime}
+		where id=#{id}
+	</update>
+	<delete id="removeJobsStateLog">
+		delete from jobs_state_log
+		where id = #{id}
+	</delete>
+
+</mapper>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysPropsDAO">
+	<resultMap id="resultMap" type="com.sensing.core.bean.SysProps">
+		<id column="uuid" property="uuid" />
+		<id column="module" property="module" />
+		<id column="path" property="path" />
+		<id column="prop_name" property="propName" />
+		<id column="file_name" property="fileName" />
+		<id column="prop_key" property="propKey" />
+		<id column="orde" property="orde" />
+		<id column="leve" property="leve" />
+		<id column="is_readonly" property="isReadonly" />
+		<id column="needs_reboot" property="needsReboot" />
+		<id column="descreption" property="descreption" />
+		<id column="enums" property="enums" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,module,path,prop_name,file_name,prop_key,orde,leve,is_readonly,needs_reboot,descreption,enums
+	</sql>
+	<insert id="saveSysProps">
+	   insert into sys_props(uuid,module,path,prop_name,prop_key,orde,leve,is_readonly,needs_reboot,descreption,enums)
+	   values(
+		   #{uuid},#{module},#{path},#{propName},#{propKey},#{orde},#{leve},#{isReadonly},#{needsReboot},#{descreption},#{enums}
+	   )
+	</insert>
+	<select id="getSysProps" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_props
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeSysProps">
+		delete from sys_props
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateSysProps">
+	   update sys_props set module=#{module},path=#{path},prop_name=#{propName},prop_key=#{propKey},orde=#{orde},leve=#{leve},is_readonly=#{isReadonly},needs_reboot=#{needsReboot},descreption=#{descreption},enums=#{enums}
+	   where uuid=#{uuid}
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from sys_props
+		<where>
+			<if test="f.module != null and f.module != '' ">
+				and module=#{f.module}
+			</if>
+			<if test="f.propKey != null and f.propKey != '' ">
+				and prop_key like CONCAT('%',#{f.propKey},'%')
+			</if>
+			<if test="f.leveFrom != null and f.leveFrom != '' ">
+				and leve &gt;=#{f.leveFrom}
+			</if>
+			<if test="f.leveEnd != null and f.leveEnd != '' ">
+				and leve &lt;= #{f.leveEnd}
+			</if>
+		</where>
+		order by file_name asc,orde asc
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from sys_props
+		<where>
+			<if test="f.module != null and f.module != '' ">
+				and module like CONCAT('%',#{f.module},'%')
+			</if>
+			<if test="f.propKey != null and f.propKey != '' ">
+				and prop_key like CONCAT('%',#{f.propKey},'%')
+			</if>
+			<if test="f.leveFrom != null and f.leveFrom != '' ">
+				and leve &gt;=#{f.leveFrom}
+			</if>
+			<if test="f.leveEnd != null and f.leveEnd != '' ">
+				and leve &lt;= #{f.leveEnd}
+			</if>
+		</where>
+	</select>
+	<select id="queryModuleList" resultType="string">
+		select distinct module from sys_props group by module order by module asc
+	</select>
+	
+	<select id="queryModuleFilesList" resultMap="resultMap">
+		select distinct file_name,path from sys_props where module=#{module} order by file_name asc
+	</select>
+	
+	<select id="queryPropByModuleAndFileNameAndKey" resultMap="resultMap">
+		select <include refid="column_list" /> from sys_props where module=#{module} and file_name=#{fileName} and prop_key=#{key} limit 1
+	</select>
+</mapper>

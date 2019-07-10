@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ITemplateDAO">
+	<resultMap id="resultMap"
+		type="com.sensing.core.bean.Template">
+		<id column="uuid" property="uuid" />
+		<id column="obj_uuid" property="objUuid" />
+		<id column="template_index" property="index" />
+		<id column="type" property="type" />
+		<id column="image_url" property="imageUrl" />
+		<id column="fea" property="fea" />
+		<id column="templatedb_id" property="templatedbId" />
+		<id column="is_deleted" property="isDeleted" />
+		<id column="create_time" property="createTime" />
+		<id column="create_user" property="createUser" />
+		<id column="modify_time" property="modifyTime" />
+		<id column="modify_user" property="modifyUser" />
+	</resultMap>
+	<sql id="column_list">
+		uuid,obj_uuid,template_index,type,image_url,fea,templatedb_id,is_deleted,create_time,create_user,modify_time,modify_user
+	</sql>
+	<insert id="saveTemplate">
+		insert into
+		template(uuid,obj_uuid,template_index,type,image_url,fea,templatedb_id,is_deleted,create_time,create_user,modify_time,modify_user)
+		values(
+		#{uuid},#{objUuid},#{index},#{type},#{imageUrl},#{fea},#{templatedbId},#{isDeleted},#{createTime},#{createUser},#{modifyTime},#{modifyUser}
+		)
+	</insert>
+	<select id="getTemplate" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template
+		where uuid = #{uuid}
+	</select>
+	<delete id="removeTemplate">
+		delete from template
+		where uuid = #{uuid}
+	</delete>
+	<update id="updateTemplate">
+		update template set
+		obj_uuid=#{objUuid},template_index=#{index},type=#{type},image_url=#{imageUrl},fea=#{fea},templatedb_id=#{templatedbId},is_deleted=#{isDeleted},create_time=#{createTime},create_user=#{createUser},modify_time=#{modifyTime},modify_user=#{modifyUser}
+		where uuid=#{uuid}
+	</update>
+	<update id="logicalDeleted">
+		update template set
+		is_deleted= 1
+		<where>
+			<if test="templatedbId != null and templatedbId != '' ">
+				and templatedb_id = #{templatedbId}
+			</if>
+		</where>
+	</update>
+	<select id="queryList" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template
+		<where>
+		</where>
+		<if test="pageFlag != null and pageFlag == 'pageFlag'">
+			LIMIT #{beginCount},#{pageRows}
+		</if>
+	</select>
+	<select id="getTemplateByObjUuid" resultMap="resultMap">
+		select
+		<include refid="column_list" />
+		from template where obj_uuid = #{objUuid} and is_deleted != 1
+	</select>
+	<select id="selectCount" resultType="int">
+		select
+		count(uuid)
+		from template
+		<where>
+		</where>
+	</select>
+</mapper>

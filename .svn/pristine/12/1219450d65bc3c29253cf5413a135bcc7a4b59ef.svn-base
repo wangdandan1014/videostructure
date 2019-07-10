@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="videostructure" default="deploy" basedir="/root/.jenkins/workspace/test-videostruct">
+	<property environment="env" />
+	<property name="webapp.name" value="/videostructure" />
+	<!--<property name="catalina.home" value="/opt/buildtmp/RLSB_Web/" />-->
+	<property name="deploy.home" value="/sensing/jenkins/code/antfile" />
+	<property name="dist.dir" value="${basedir}/dist" />
+	<property name="webRoot.dir" value="${basedir}/WebContent" />
+	<property name="src.dir" value="${basedir}/src" />
+	<property name="config.dir" value="${basedir}/src/config" />
+	<property name="dll.dir" value="${basedir}/src/dll" />
+	<property name="properties.dir" value="${basedir}/src/properties" />
+	<property name="lib.dir" value="${webRoot.dir}/WEB-INF/lib" />
+	<property name="build.dir" value="${basedir}/build" />
+	<!-- 使用eclipse jdt进行编译，而不使用JDK编译  -->
+	<!-- 初始化classpath -->
+	<path id="project.classpath">
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+ 
+	<!-- get the source compile classpath in a printable form -->
+	<pathconvert pathsep="${line.separator}|   |-- "
+             property="echo.path.compile"
+             refid="project.classpath">
+	</pathconvert>
+	
+	<!-- show classpath jars -->
+	<target name="print_classpath">
+		<echo message="|-- compile classpath"/>
+		<echo message="|   |"/>
+		<echo message="|   |-- ${echo.path.compile}"/>
+	</target>
+	
+	
+	<!-- 删除之前的目录结构 -->
+	<target name="clear" description="清理旧文件">
+		<delete dir="${build.dir}" />
+		<delete dir="${dist.dir}" />
+		<delete file="${deploy.home}/${webapp.name}.war" />
+	</target>
+ 
+	<!-- 创建目录结构 -->
+	<target name="init" depends="clear" description="创建初始化目录结构">
+		<mkdir dir="${build.dir}/" />
+		<mkdir dir="${build.dir}/classes" />
+		<mkdir dir="${build.dir}/classes/config" />
+		<mkdir dir="${build.dir}/classes/dll" />
+		<mkdir dir="${build.dir}/classes/properties" />
+		<mkdir dir="${dist.dir}" />
+	</target>
+ 
+	<!-- 编译java -->
+	<target name="compile" depends="init" description="编译java文件">
+		<echo message="begin compile..." />
+		<javac srcdir="${src.dir}" destdir="${build.dir}/classes" 
+			includeantruntime="false" nowarn="on" 
+			source="1.8" target="1.8" deprecation="true" debug="false"
+			encoding="UTF-8" classpathref="project.classpath" >
+			<compilerarg line="-Xlint:unchecked" />
+		</javac>
+		
+		<copy todir="${build.dir}/classes">
+			<fileset dir="${src.dir}">
+				<include name="**/*.xml" />
+			</fileset>
+			
+		</copy>
+		<copy todir="${build.dir}/classes/config">
+			<fileset dir="${config.dir}">
+				<include name="**/*.xml" />
+			</fileset>
+		</copy>
+		<copy todir="${build.dir}/classes/dll">
+			<fileset dir="${dll.dir}">
+				<include name="**/*.*" />
+			</fileset>
+		</copy>
+		<copy todir="${build.dir}/classes/properties">
+			<fileset dir="${properties.dir}">
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+		
+		<echo message="end compile..." />
+	</target>
+ 
+	<!-- 打成war包, 名称默认为 项目名 -->
+	<target name="war" depends="compile" description="将工程打成war包">
+		<echo message="begin war..." />
+		<war destfile="${dist.dir}/${webapp.name}.war" basedir="${webRoot.dir}" 
+			webxml="${webRoot.dir}/WEB-INF/web.xml">
+			<lib dir="${lib.dir}" />
+			<classes dir="${build.dir}/classes" />
+			<!--<fileset dir="${webRoot.dir}">
+				<include name="***.*" />
+			</fileset>-->
+		</war>
+		<echo message="end war..." />
+	</target>
+ 
+	<!-- copy war包 tomcat的deploy目录 -->
+	<target name="deploy" depends="war" description="部署项目">
+		<echo message="begin deploy..." />
+		<copy file="${dist.dir}/${webapp.name}.war" todir="${deploy.home}" />
+		<echo message="end deploy..." />
+	</target>
+ 
+</project>

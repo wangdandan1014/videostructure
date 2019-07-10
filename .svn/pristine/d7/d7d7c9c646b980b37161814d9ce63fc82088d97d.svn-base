@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sensing.core.dao.ISysResourceDAO">
+    <resultMap id="resultMap" type="com.sensing.core.bean.SysResource">
+        <id column="id" property="id"/>
+        <id column="title" property="title"/>
+        <id column="parent_id" property="parentId"/>
+        <id column="type" property="type"/>
+        <id column="path" property="path"/>
+        <id column="orde" property="orde"/>
+        <id column="search_code" property="searchCode"/>
+        <id column="project_type" property="projectType"/>
+        <id column="memo" property="memo"/>
+        <id column="method" property="method"/>
+    </resultMap>
+    <sql id="column_list">
+		id,title,parent_id,type,path,orde,search_code,project_type,memo,method
+	</sql>
+    <insert id="saveSysResource" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.sensing.core.bean.SysResource">
+	   insert into sys_resource(title,parent_id,type,path,orde,search_code,project_type,memo)
+	   values(
+		   #{title},#{parentId},#{type},#{path},#{orde},#{searchCode},#{projectType},#{memo}
+	   )
+	</insert>
+    <select id="getSysResource" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from sys_resource
+        where id = #{id}
+    </select>
+    <delete id="removeSysResource">
+		delete from sys_resource
+		where id = #{id}
+	</delete>
+    <update id="updateSysResource">
+	   update sys_resource set title=#{title},parent_id=#{parentId},type=#{type},path=#{path},orde=#{orde},search_code=#{searchCode},project_type=#{projectType},memo=#{memo}
+	   where id=#{id}
+	</update>
+    <select id="queryList" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from sys_resource
+    </select>
+    <select id="selectCount" resultType="int">
+        select
+        count(id)
+        from sys_resource
+        <where>
+            <if test="f.title != null and f.title != '' ">
+                and title like CONCAT('%',#{f.title},'%')
+            </if>
+            <if test="f.parentIdFrom != null and f.parentIdFrom != '' ">
+                and parent_id &gt;=#{f.parentIdFrom}
+            </if>
+            <if test="f.parentIdEnd != null and f.parentIdEnd != '' ">
+                and parent_id &lt;= #{f.parentIdEnd}
+            </if>
+            <if test="f.typeFrom != null and f.typeFrom != '' ">
+                and type &gt;=#{f.typeFrom}
+            </if>
+            <if test="f.typeEnd != null and f.typeEnd != '' ">
+                and type &lt;= #{f.typeEnd}
+            </if>
+            <if test="f.path != null and f.path != '' ">
+                and path like CONCAT('%',#{f.path},'%')
+            </if>
+            <if test="f.ordeFrom != null and f.ordeFrom != '' ">
+                and orde &gt;=#{f.ordeFrom}
+            </if>
+            <if test="f.ordeEnd != null and f.ordeEnd != '' ">
+                and orde &lt;= #{f.ordeEnd}
+            </if>
+            <if test="f.searchCode != null and f.searchCode != '' ">
+                and search_code like CONCAT('%',#{f.searchCode},'%')
+            </if>
+            <if test="f.memo != null and f.memo != '' ">
+                and memo like CONCAT('%',#{f.memo},'%')
+            </if>
+        </where>
+    </select>
+    <!-- 根据用户名查询所属资源信息  state:0 停用 1启动 2 删除  -->
+    <select id="selectResourceByUserName" resultMap="resultMap">
+		SELECT
+			 DISTINCT sr.id,
+		      sr.title,
+		      sr.memo,
+		      sr.orde,
+		      sr.parent_id,
+		      sr.path,
+		      sr.search_code,
+		      sr.type
+		FROM
+			sys_user u
+			LEFT JOIN sys_role r ON u.role_id = r.id
+			LEFT JOIN sys_role_reso rr ON r.id = rr.role_id
+			LEFT JOIN sys_resource sr ON rr.reso_id = sr.id 
+		WHERE
+			u.username = #{userName}
+			and u.state='1'
+	</select>
+
+    <select id="getRoleByUuId" resultType="Integer">
+       SELECT sur.role_id
+       FROM sys_user su, sys_user_role sur
+       WHERE su.uuid = sur.user_uuid AND su.uuid = #{uuid}
+    </select>
+    <select id="queryResourceByMethod" resultMap="resultMap">
+        select
+        <include refid="column_list"/>
+        from sys_resource
+        where type=3
+    </select>
+
+    <select id="getSysResoByRoleIds" resultType="com.sensing.core.bean.SysResource" parameterType="list">
+        SELECT
+        DISTINCT sr.id,
+        sr.title,
+        sr.parent_id As parentId,
+        sr.type,
+        sr.path,
+        sr.orde,
+        sr.project_type as projectType,
+        sr.search_code As searchCode,
+        sr.memo,
+        sr.method,
+        srr.is_del As isDel
+        FROM sys_role_reso srr, sys_resource sr
+        WHERE srr.reso_id = sr.id   AND sr.type=1
+        <if test="delState != null ">
+          and  srr.is_del = #{delState}
+        </if>
+        AND srr.role_id IN
+        <foreach item="item" index="index" collection="list" open="("
+                 separator="," close=")">
+            #{item}
+        </foreach>
+
+    </select>
+
+    <select id="getAllSysResoByRoleIds" resultType="com.sensing.core.bean.SysResource" >
+        SELECT
+	        DISTINCT sr.id,
+	        sr.title,
+	        sr.parent_id As parentId,
+	        sr.type,
+	        sr.path,
+	        sr.orde,
+	        sr.search_code As searchCode,
+	        sr.memo,
+	        sr.method
+        FROM  
+        	sys_resource sr
+        WHERE 
+        	sr.type=1
+    </select>
+
+	<!-- 查询操作日志的二级联通的选项 -->    
+    <select id="queryOpeLogList" resultType="com.sensing.core.bean.SysResource">
+    	SELECT
+			sr.id,
+			sr.title,
+			sr.parent_id,
+			sr.type,
+			sr.path,
+			sr.method,
+			sr.orde,
+			sr.search_code,
+			sr.project_type,
+			sr.memo
+		FROM
+			sys_resource sr
+		WHERE
+			sr.type = 3
+		ORDER BY
+			sr.title ASC
+    </select>
+    <select id="queryOpeLogCount" resultType="Integer">
+    	SELECT
+    		count(1)
+		FROM
+			sys_resource sr
+		WHERE
+			sr.type = 3
+    </select>
+
+</mapper>

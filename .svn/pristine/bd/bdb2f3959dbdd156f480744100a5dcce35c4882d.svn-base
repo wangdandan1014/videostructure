@@ -1,0 +1,619 @@
+package com.sensing.core.utils.task;
+
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import com.google.common.base.Joiner;
+import com.sensing.core.alarm.DataInitService;
+import com.sensing.core.bean.Channel;
+import com.sensing.core.bean.Jobs;
+import com.sensing.core.bean.JobsChannelTemp;
+import com.sensing.core.bean.RpcLog;
+import com.sensing.core.bean.Task;
+import com.sensing.core.bean.TaskChannelResp;
+import com.sensing.core.cacahes.PreviewCache;
+import com.sensing.core.dao.IChannelDAO;
+import com.sensing.core.dao.IJobsChannelDAO;
+import com.sensing.core.dao.IJobsDAO;
+import com.sensing.core.dao.IRpcLogDAO;
+import com.sensing.core.dao.ITaskChannelDAO;
+import com.sensing.core.dao.ITaskDAO;
+import com.sensing.core.datasave.DataSaveCache;
+import com.sensing.core.service.impl.ChannelServiceImpl;
+import com.sensing.core.utils.Constants;
+import com.sensing.core.utils.ResponseBean;
+import com.sensing.core.utils.StringUtils;
+import com.sensing.core.utils.WebUtil;
+import com.sensing.core.utils.results.ResultUtils;
+import com.sensing.core.utils.time.DateUtil;
+
+
+/**
+ * 定时任务：布控和任务模块的告警
+ */
+@Component
+public class JobsAndTaskTimer {
+
+    private static final Log log = LogFactory.getLog(JobsAndTaskTimer.class);
+
+
+    // test df
+    @Resource
+    public IJobsDAO jobsDAO;
+    @Resource
+    public IJobsChannelDAO jobsChannelDAO;
+    @Resource
+    public ITaskDAO taskDAO;
+    @Resource
+    public ITaskChannelDAO taskChannelDAO;
+    @Resource
+    public IChannelDAO channelDAO;
+    @Resource
+    public ChannelServiceImpl channelServiceImpl;
+    @Resource
+    public IRpcLogDAO rpcLogDAO;
+    @Resource
+    public DataInitService dataInitService;
+    @Resource
+    public TaskTimerTask taskTimerTask;
+    @Resource
+    public JobsTimerTask jobsTimerTask;
+
+    private static volatile boolean isProcess = false;
+
+    /**
+     * 执行定时任务
+     * @param initFlag
+     * @return
+     * @author mingxingyu
+     * @date   2019年6月14日 上午10:44:42
+     */
+    public ResponseBean startJobs() {
+        return startJobWithPre(null,false);
+    }
+
+    /**
+     * 初始化执行
+     * @return
+     * @author mingxingyu
+     * @date   2019年6月14日 上午11:46:30
+     */
+    public ResponseBean startJobsWithInit() {
+    	return startJobWithPre(null,true);
+    }
+    
+    /**
+     * 停止任务，先将任务的状态设置为已完成，添加相应的标志位isPreState=1，update表的时候设置成已完成
+     * @param uuid 任务的uuid，批量执行的时候该值为空
+     * @param initFlag	是否是初始化状态，初始化状态需通知抓拍所有的通道
+     * @return
+     * @author mingxingyu
+     * @date   2019年6月14日 上午10:42:22
+     */
+    public ResponseBean startJobWithPre(String uuid,boolean initFlag) {
+        try {
+
+            if (isProcess) {
+                log.info("~~~~~~ JobsAndTaskTimer ~~~~~~isProcess为" + isProcess + "~~当前有任务正在执行中");
+                return ResultUtils.success();
+            }
+            isProcess = true;
+            log.info("~~~~~~ JobsAndTaskTimer ~~~~~~" + DateUtil.DateToString(new Date()));
+
+
+            List<Task> tasks = taskDAO.getUpdateStateTask(Arrays.asList(Constants.TASK_STAT_WAITSTART, Constants.TASK_STAT_RUNNING, Constants.TASK_STAT_INREST, Constants.TASK_STAT_FAILEE,Constants.TASK_STAT_DONE));
+
+            List<Jobs> jobs = jobsDAO.getUpdateStateJob(Arrays.asList(Constants.JOB_STATE_WAITSTART, Constants.JOB_STATE_RUNNING, Constants.JOB_STATE_INREST));
+
+//            if (CollectionUtils.isEmpty(tasks) && CollectionUtils.isEmpty(jobs)) {
+//                return ResultUtils.success();
+//            }
+            for (Task t : tasks) {
+                int newState = taskTimerTask.getTaskState(t);
+                if (t.getUuid().equals(uuid)) {
+                    t.setNewState(Constants.TASK_STAT_DONE);
+                    t.setIsPreState(1);
+                } else {
+                    t.setNewState(newState);
+                }
+            }
+            for (Jobs j : jobs) {
+                int newState = jobsTimerTask.getJobState(j);
+                j.setNewState(newState);
+                if (j.getUuid().equals(uuid)) {
+                    j.setNewState(Constants.JOB_STATE_DONE);
+                    j.setIsPreState(1);
+                } else {
+                    j.setNewState(newState);
+                }
+            }
+
+            //要开启的
+            List<ChannelBean> openChannel = new ArrayList<>();
+            //要关闭的
+            List<ChannelBean> closeChannel = new ArrayList<>();
+            List<String> runUuid = new ArrayList<>();
+
+
+            List<TaskChannelResp> allTaskChannel = new ArrayList<>();
+            if (!CollectionUtils.isEmpty(tasks)) {
+
+                allTaskChannel = taskChannelDAO.getTaskChannelByTaskIds(tasks.stream().map(a -> a.getUuid()).collect(Collectors.toList()));
+
+                // 实时结构化任务，要开启的。。。。
+                List<ChannelBean> taskopen = getChannelTask(tasks, allTaskChannel, Constants.TASK_STAT_RUNNING);
+                // 实时结构化任务，要关闭的。。。。
+                List<ChannelBean> taskclose = getChannelTask(tasks, allTaskChannel, Constants.TASK_STAT_INREST, Constants.TASK_STAT_DONE);
+                openChannel.addAll(taskopen);
+                closeChannel.addAll(taskclose);
+
+                List<String> runTaskUuid = tasks.stream().filter(t -> t.getState() == Constants.TASK_STAT_RUNNING).map(t -> t.getUuid()).collect(Collectors.toList());
+                runUuid.addAll(runTaskUuid);
+
+            }
+
+            List<JobsChannelTemp> allJobChannel = new ArrayList<>();
+            if (!CollectionUtils.isEmpty(jobs)) {
+                allJobChannel = jobsChannelDAO.getJobsChannelByJobUuid(jobs.stream().map(a -> a.getUuid()).collect(Collectors.toList()));
+                // 布控任务，要开启的。。。。
+                List<ChannelBean> jobopen = getChannelJobs(jobs, allJobChannel, Constants.JOB_STATE_RUNNING);
+                // 布控任务，要关闭的。。。。
+                List<ChannelBean> jobclose = getChannelJobs(jobs, allJobChannel, Constants.JOB_STATE_INREST, Constants.JOB_STATE_DONE);
+                openChannel.addAll(jobopen);
+                closeChannel.addAll(jobclose);
+
+                // 查到所有正在开启的通道对应的 实时结构化 或者 布控
+                List<String> runJobsUuid = jobs.stream().filter(t -> t.getState() == Constants.JOB_STATE_RUNNING).map(t -> t.getUuid()).collect(Collectors.toList());
+
+                runUuid.addAll(runJobsUuid);
+
+            }
+
+//            if (CollectionUtils.isEmpty(openChannel) && CollectionUtils.isEmpty(closeChannel)) {
+//                return ResultUtils.success();
+//            }
+
+            //所有通道
+            List<Channel> allChannel = channelDAO.selectAllChannelList();
+
+            List<ModifyChannelBean> _openModify = new ArrayList<>();
+            List<ModifyChannelBean> _closeModify = new ArrayList<>();
+
+            for (Channel c : allChannel) {
+                ModifyChannelBean mcb;
+                mcb = new ModifyChannelBean();
+                mcb.setChannelUuid(c.getUuid());
+                List<ChannelBean> _openCh = openChannel.stream().filter(a -> a.getChannelUuid().equals(c.getUuid())).collect(Collectors.toList());
+                if (CollectionUtils.isEmpty(_openCh)) {
+                    continue;
+                }
+                List<Integer> afterType = new ArrayList<>();
+                for (ChannelBean cb : _openCh) {
+                    List<Integer> newAnalyType = cb.getNewAnalyType();
+                    if (afterType.size() == 0) {
+                        afterType.addAll(newAnalyType);
+                    } else {
+                        for (Integer type : newAnalyType) {
+                            if (!afterType.contains(type)) {
+                                afterType.add(type);
+                            }
+                        }
+                    }
+                }
+                mcb.setAnalyType(afterType);
+                _openModify.add(mcb);
+            }
+
+            // 打开通道 查询首页缓存
+            if (PreviewCache.deviceTimeMap != null && PreviewCache.deviceTimeMap.size() > 0) {
+                Set<String> userPreviewMapKeySet = PreviewCache.deviceTimeMap.keySet();
+                List<Integer> allCapTypeList = new ArrayList<Integer>();
+                allCapTypeList.add(Constants.CAP_ANALY_TYPE_PERSON);
+                allCapTypeList.add(Constants.CAP_ANALY_TYPE_MOTOR_VEHICLE);
+                allCapTypeList.add(Constants.CAP_ANALY_TYPE_NONMOTOR_VEHICLE);
+                for (String deviceId : userPreviewMapKeySet) {
+                    //去重，_openModify中之前已有的
+                    Iterator<ModifyChannelBean> iterator = _openModify.iterator();
+                    while (iterator.hasNext()) {
+                        ModifyChannelBean _open = iterator.next();
+                        if (_open.getChannelUuid().equals(deviceId)) {
+                            iterator.remove();
+                        }
+                    }
+                    ModifyChannelBean mcb = new ModifyChannelBean();
+                    mcb.setChannelUuid(deviceId);
+                    mcb.setAnalyType(allCapTypeList);
+                    _openModify.add(mcb);
+                }
+
+
+            }
+
+            for (Channel c : allChannel) {
+                List<String> openChannelUuids = _openModify.stream().map(a -> a.getChannelUuid()).collect(Collectors.toList());
+                if (!openChannelUuids.contains(c.getUuid())) {
+                    ModifyChannelBean m = new ModifyChannelBean();
+                    m.setChannelUuid(c.getUuid());
+                    if (!PreviewCache.devicePreviewMap.containsKey(c.getUuid())) {
+                        _closeModify.add(m);
+                    }
+                }
+
+            }
+            log.info("JobsAndTaskTimer==1===本次定时任务通道更新情况=====打开===>>" + _openModify.toString() + "关闭===>>" + _closeModify);
+
+
+            /******  刷新mongo的缓存 ***/
+            Map<String, Integer[]> beforeMongoCash = new ConcurrentHashMap<>();
+            refreshMongoCache(tasks, allTaskChannel, _openModify, beforeMongoCash);
+
+
+            /******************************************************* 通知抓拍 ***********************************************************************/
+            // 当前的通道状态  和  要修改成的通道状态的  相似的就去重，防止重复通知抓拍
+            if ( !initFlag ) {
+	            for (Channel c : allChannel) {
+	                List<ModifyChannelBean> open = _openModify.stream().filter(a -> a.getChannelUuid().equals(c.getUuid())).collect(Collectors.toList());
+	                List<ModifyChannelBean> close = _closeModify.stream().filter(a -> a.getChannelUuid().equals(c.getUuid())).collect(Collectors.toList());
+	
+	                if (open.size() == 1 && close.size() == 0) {
+	                    List<Integer> beforeA = stringToInteger(c.getAnalysisType());
+	                    //前后相等
+	                    if (c.getCapStat() == 1 && StringUtils.isEqualIntegerList(open.get(0).getAnalyType(), beforeA)) {
+	                        _openModify.remove(open.get(0));
+	                    }
+	                }
+	
+	                if (open.size() == 0 && close.size() == 1) {
+	//                    List<Integer> beforeA = stringToInteger(c.getAnalysisType());
+	                    // 要关闭的，当前已经是关闭的状态
+	                    if (c.getCapStat() == 0) {
+	                        _closeModify.remove(close.get(0));
+	                    }
+	                }
+	            }
+            }
+
+            int code = updateCapServer(_openModify, 1);
+            if (code != 1) {
+                DataSaveCache.deviceIdMap = beforeMongoCash;
+                return ResultUtils.error(-1, "更新抓拍状态异常");
+            }else{
+            	log.info("本次通知抓拍打开通道:"+_openModify.toString());
+            }
+            
+            //  查询首页视频预览的缓存中
+            int code2 = updateCapServer(_closeModify, 0);
+            if (code2 != 1) {
+                DataSaveCache.deviceIdMap = beforeMongoCash;
+                return ResultUtils.error(-1, "更新抓拍状态异常");
+            }else{
+            	log.info("本次通知抓拍关闭通道:"+_closeModify.toString());
+            }
+
+            /******************************************************* 更新数据库 ***********************************************************************/
+            //新状态和旧状态不一致，则更新数据库
+//            List<Task> updateTasks = tasks.stream().filter(t -> t.getState() != t.getNewState() && (t.getNewState() == Constants.TASK_STAT_RUNNING || t.getNewState() == Constants.TASK_STAT_DONE || t.getNewState() == Constants.TASK_STAT_INREST )).collect(Collectors.toList());
+            List<Task> updateTasks = tasks.stream().filter(t -> t.getState() != t.getNewState()).collect(Collectors.toList());
+            if (!CollectionUtils.isEmpty(updateTasks)) {
+                taskDAO.setUpdateStateTasks(tasks);
+                setTaskRpcLog(updateTasks, null, 1);
+            }
+//            List<Jobs> updateJobs = jobs.stream().filter(j -> j.getState() != j.getNewState() && (j.getNewState() == Constants.JOB_STATE_RUNNING || j.getNewState() == Constants.JOB_STATE_INREST || j.getNewState() == Constants.JOB_STATE_DONE)).collect(Collectors.toList());
+            List<Jobs> updateJobs = jobs.stream().filter(j -> j.getState() != j.getNewState() ).collect(Collectors.toList());
+            if (!CollectionUtils.isEmpty(updateJobs)) {
+                jobsDAO.updateStateBetch(updateJobs);
+                dataInitService.init();
+                setTaskRpcLog(null, updateJobs, 1);
+            }
+        } catch (Exception e) {
+            log.error("JobsAndTaskTimer====" + StringUtils.getStackTrace(e));
+            return ResultUtils.error(100, "JobsAndTaskTimer服务出错");
+        } finally {
+            isProcess = false;
+        }
+        return ResultUtils.success();
+    }
+
+    /**
+     * 刷新mongo缓存
+     * 只保存实时结构化任务中的抓拍类型
+     *
+     * @param tasks
+     * @param allTaskChannel
+     * @param _openModify
+     * @param beforeMongoCash
+     */
+    private void refreshMongoCache(List<Task> tasks, List<TaskChannelResp> allTaskChannel, List<ModifyChannelBean> _openModify, Map<String, Integer[]> beforeMongoCash) {
+
+        List<ModifyChannelBean> mongoChannelBean = new ArrayList<>();
+        for (ModifyChannelBean cn : _openModify) {
+
+            ModifyChannelBean mcb = new ModifyChannelBean();
+            mcb.setChannelUuid(cn.getChannelUuid());
+            mcb.setAnalyType(cn.getAnalyType());
+
+            List<String> runTaskUuids = tasks.stream().filter(t -> t.getNewState() == Constants.TASK_STAT_RUNNING).map(a -> a.getUuid()).collect(Collectors.toList());
+
+            // 当前要打开的通道，关联的 处在执行中的任务的  uuid
+            List<TaskChannelResp> taskChannel = CollectionUtils.isEmpty(runTaskUuids) ? new ArrayList<>() :
+                    allTaskChannel.stream().filter(a ->
+                            (a.getChannelUuid().equals(cn.getChannelUuid()) && runTaskUuids.contains(a.getTaskUuid()))
+                    ).collect(Collectors.toList());
+
+
+            /*********  当前通道关联的正在处理中的任务    ****************/
+            List<Integer> taskAnaly = new ArrayList<>();
+            for (TaskChannelResp tc : taskChannel) {
+                if (taskAnaly.size() == 0) {
+                    taskAnaly.addAll(tc.getTask_analy_type_list());
+                } else {
+                    for (Integer t : tc.getTask_analy_type_list()) {
+                        if (!taskAnaly.contains(t)) {
+                            taskAnaly.add(t);
+                        }
+                    }
+                }
+            }
+
+            if (!CollectionUtils.isEmpty(taskAnaly)) {
+                mcb.setAnalyType(taskAnaly);
+                mongoChannelBean.add(mcb);
+            }
+        }
+        //将之前的mongocash保存下来
+        Map<String, Integer[]> deviceIdMap = DataSaveCache.deviceIdMap;
+        try {
+            BeanUtils.copyProperties(beforeMongoCash, deviceIdMap);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        log.info("JobsAndTaskTimer==2===刷新mongo缓存=====" + mongoChannelBean.toString());
+        Map<String, Integer[]> map = new ConcurrentHashMap<>();
+        for (ModifyChannelBean b : mongoChannelBean) {
+            map.put(b.getChannelUuid(), b.getAnalyType().toArray(new Integer[b.getAnalyType().size()]));
+        }
+        DataSaveCache.deviceIdMap = map;
+    }
+
+
+    /**
+     * 更新抓拍状态
+     *
+     * @param list
+     * @param newCapState
+     */
+    public int updateCapServer(List<ModifyChannelBean> list, int newCapState) {
+        //2019/1/17 lxh 通知抓拍
+        if (CollectionUtils.isEmpty(list)) {
+            return 1;
+        }
+        log.info("JobsAndTaskTimer==3===修改抓拍通道状态=====" + newCapState + list.toString() + "---" + DateUtil.DateToString(new Date()));
+        Channel c = null;
+        try {
+            for (ModifyChannelBean mb : list) {
+//                c = channelDAO.getChannelAll(mb.getChannelUuid());
+                c = channelDAO.getChannel(mb.getChannelUuid(),Constants.DELETE_NO.toString());
+                if (c == null) {
+                    continue;
+                }
+                c.setCapStat(newCapState);
+
+                //视频预览中的通道，该通道不再关闭，已打开的情况下，通知抓拍分析
+                if (PreviewCache.devicePreviewMap.containsKey(c.getUuid())) {
+                    List<Integer> capTypeList = new ArrayList<Integer>();
+                    capTypeList.add(Constants.CAP_ANALY_TYPE_PERSON);
+                    capTypeList.add(Constants.CAP_ANALY_TYPE_MOTOR_VEHICLE);
+                    capTypeList.add(Constants.CAP_ANALY_TYPE_NONMOTOR_VEHICLE);
+                    c.setAnalysisType(Joiner.on(",").join(capTypeList));
+                } else {
+                    if (newCapState == 0) {
+                        c.setAnalysisType(null);
+                    } else {
+                        c.setAnalysisType(Joiner.on(",").join(mb.getAnalyType()));
+                    }
+                }
+                //更新抓拍中的通道信息
+                channelServiceImpl.updateChannel(c);
+//	            channelDAO.updateChannelCap(c);
+            }
+        } catch (Exception e) {
+            log.error("更新通道的抓拍信息和更新数据库的过程中发生异常." + e.getMessage());
+            e.printStackTrace();
+            return 0;
+        }
+        return 1;
+    }
+
+
+    public List<ChannelBean> getChannelTask(List<Task> tasks, List<TaskChannelResp> allTaskChannel, Integer... state) {
+        List<ChannelBean> list = new ArrayList<>();
+        List<Task> openTaskLists = null;
+        if (state.length == 1) {
+            openTaskLists = tasks.stream().filter(t -> (t.getNewState() == state[0])).collect(Collectors.toList());
+        } else if (state.length == 2) {
+            openTaskLists = tasks.stream().filter(t -> (t.getNewState() == state[0] || t.getNewState() == state[1])).collect(Collectors.toList());
+        }
+        if (CollectionUtils.isEmpty(openTaskLists)) {
+            return list;
+        }
+
+        ChannelBean cb = null;
+        Iterator<Task> iterator = openTaskLists.iterator();
+        while (iterator.hasNext()) {
+            Task t = iterator.next();
+            List<TaskChannelResp> _taskChannel = allTaskChannel.stream().filter(a -> a.getTaskUuid().equals(t.getUuid())).collect(Collectors.toList());
+            if (CollectionUtils.isEmpty(_taskChannel)) {
+                setTaskDone(t, null, 1);
+                iterator.remove();
+                continue;
+            }
+            for (TaskChannelResp tc : _taskChannel) {
+                cb = new ChannelBean();
+                cb.setChannelUuid(tc.getChannelUuid());
+                if (StringUtils.isNullOrEmpty(t.getAnalyType())) {
+                    continue;
+                }
+                cb.setNewAnalyType(stringToInteger(t.getAnalyType()));
+                if (StringUtils.isNotEmpty(tc.getAnalysis_type())) {
+                    cb.setNowAnalyType(stringToInteger(tc.getAnalysis_type()));
+                }
+                cb.setExtendUuid(t.getUuid());
+                cb.setIsJobs(0);
+                list.add(cb);
+            }
+        }
+        return list;
+    }
+
+    public List<ChannelBean> getChannelJobs(List<Jobs> tasks, List<JobsChannelTemp> allTaskChannel, Integer... state) {
+        List<ChannelBean> list = new ArrayList<>();
+        List<Jobs> openTaskLists = null;
+        if (state.length == 1) {
+            openTaskLists = tasks.stream().filter(t -> (t.getNewState() == state[0])).collect(Collectors.toList());
+        } else if (state.length == 2) {
+            openTaskLists = tasks.stream().filter(t -> (t.getNewState() == state[0] || t.getNewState() == state[1])).collect(Collectors.toList());
+        }
+        if (CollectionUtils.isEmpty(openTaskLists)) {
+            return list;
+        }
+        ChannelBean cb = null;
+        Iterator<Jobs> iterator = openTaskLists.iterator();
+        while (iterator.hasNext()) {
+            Jobs j = iterator.next();
+            List<JobsChannelTemp> _taskChannel = allTaskChannel.stream().filter(a -> a.getJobUuid().equals(j.getUuid())).collect(Collectors.toList());
+            if (CollectionUtils.isEmpty(_taskChannel)) {
+                setTaskDone(null, j, 2);
+                iterator.remove();
+                continue;
+            }
+
+            for (JobsChannelTemp tc : _taskChannel) {
+                cb = new ChannelBean();
+                cb.setChannelUuid(tc.getChannelUuid());
+                if (StringUtils.isNullOrEmpty(j.getJobsType())) {
+                    continue;
+                }
+
+                cb.setNewAnalyType(stringToInteger(j.getJobsType()));
+                if (StringUtils.isNotEmpty(tc.getAnalysis_type())) {
+                    cb.setNowAnalyType(stringToInteger(tc.getAnalysis_type()));
+                }
+                cb.setExtendUuid(j.getUuid());
+                cb.setIsJobs(1);
+                list.add(cb);
+            }
+        }
+        return list;
+    }
+
+
+    /**
+     * 将实施结构化布控任务设置为已完成状态
+     *
+     * @param task
+     * @param jobs
+     * @param type 1:实时结构化任务  2：布控任务
+     */
+    public void setTaskDone(Task task, Jobs jobs, int type) {
+        if (type == 1) {
+            Integer newState = task.getNewState();
+            if (newState == Constants.TASK_STAT_DONE) {
+                return;
+            }
+            task.setNewState(Constants.TASK_STAT_DONE);
+            taskDAO.setUpdateStateTasks(Arrays.asList(task));
+        } else if (type == 2) {
+            Integer newState = jobs.getNewState();
+            if (newState == Constants.JOB_STATE_DONE) {
+                return;
+            }
+            jobs.setNewState(Constants.JOB_STATE_DONE);
+            jobsDAO.updateStateBetch(Arrays.asList(jobs));
+        }
+        setTaskRpcLog(Arrays.asList(task), Arrays.asList(jobs), type);
+    }
+
+    /**
+     * @param taskList
+     * @param jobsList
+     * @param type     1:实时结构化任务  2：布控任务
+     * @param errorMsg
+     */
+    public void setTaskRpcLog(List<Task> taskList, List<Jobs> jobsList, int type, String... errorMsg) {
+        RpcLog rl = new RpcLog();
+        rl.setResult("成功");
+        rl.setRpcType("spring-task");
+        rl.setTodo("修改任务状态值");
+        rl.setType(Constants.RPC_LOG_TYPE_OPERATE);
+        StringBuilder builder = new StringBuilder();
+        if (type == 1) {
+            if (CollectionUtils.isEmpty(taskList)) {
+                return;
+            }
+            for (Task t : taskList) {
+                builder.append(" task名称：" + t.getName());
+                builder.append(" uuid：" + t.getUuid() + " ");
+                builder.append(" 之前状态值：" + Constants.TASK_STAT_MAP.get(t.getState()) + " ");
+                builder.append(" 之后状态值：" + (t.getIsPreState() == 1 ? "已停止" : Constants.TASK_STAT_MAP.get(t.getNewState()) + " "));
+            }
+        } else if (type == 2) {
+            if (CollectionUtils.isEmpty(jobsList)) {
+                return;
+            }
+            for (Jobs t : jobsList) {
+                builder.append(" job名称：" + t.getName());
+                builder.append(" uuid：" + t.getUuid() + " ");
+                builder.append(" 之前状态值：" + Constants.JOB_STATE_MAP.get(t.getState()) + " ");
+                builder.append(" 之后状态值：" + Constants.JOB_STATE_MAP.get(t.getNewState()) + " ");
+                builder.append(" 之后状态值：" + (t.getIsPreState() == 1 ? "已停止" : Constants.JOB_STATE_MAP.get(t.getNewState()) + " "));
+            }
+        }
+
+        if (errorMsg != null && errorMsg.length == 1) {
+            builder.append(errorMsg.toString());
+        }
+
+        rl.setMemo(new String(builder));
+        rl.setCallTime(new Date());
+        rl.setMode(Constants.INTERFACE_CALL_TYPE_INIT);
+        rl.setModule(Constants.SEVICE_MODEL_TASK);
+        rl.setIp(WebUtil.getLocalIP());
+        rpcLogDAO.saveRpcLog(rl);
+    }
+
+    /**
+     * 将用,分割的字符串，转化为数字集合
+     *
+     * @param str "1,3,4"
+     * @return
+     */
+    public List<Integer> stringToInteger(String str) {
+        if (StringUtils.isEmptyOrNull(str)) {
+            return new ArrayList<>();
+        }
+        String[] split = str.split(",");
+        List<String> list = Arrays.asList(split);
+        List<Integer> collect = list.stream().map(a -> Integer.parseInt(a)).collect(Collectors.toList());
+        return collect;
+    }
+
+}
